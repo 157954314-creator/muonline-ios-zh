@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-ios</TargetFramework>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">ios-arm64</RuntimeIdentifier>
+    <OutputType>Exe</OutputType>
+    <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+    <ClientMainTargetFramework>net10.0-ios</ClientMainTargetFramework>
+    <MonoGameFramework>MonoGame.Framework.iOS</MonoGameFramework>
+    <MonoGamePlatform>iOS</MonoGamePlatform>
+    <RestoreUseStaticGraphEvaluation>true</RestoreUseStaticGraphEvaluation>
+    <UseSourceGenerators>true</UseSourceGenerators>
+    <SkipXcodeVersionCheck>true</SkipXcodeVersionCheck>
+
+    <!-- Default to unsigned build for Sideloadly / AltStore / CI; override with EnableCodeSigning=true for Xcode/TestFlight -->
+    <EnableCodeSigning Condition="'$(EnableCodeSigning)' == ''">false</EnableCodeSigning>
+    <CodesignKey Condition="'$(EnableCodeSigning)' == 'false'"></CodesignKey>
+    <CodesignProvision Condition="'$(EnableCodeSigning)' == 'false'"></CodesignProvision>
+    <PublishTrimmed>true</PublishTrimmed>
+    <MtouchLink Condition="'$(MtouchLink)' == ''">SdkOnly</MtouchLink>
+    <MtouchUseLlvm Condition="'$(MtouchUseLlvm)' == ''">false</MtouchUseLlvm>
+    <UseInterpreter>true</UseInterpreter>
+    <MtouchInterpreter>-all,Client.Data</MtouchInterpreter>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);IOS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.6.1" />
+    <PackageReference Include="MonoGame.Framework.iOS" Version="3.8.6.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UsePrebuiltContent)' != 'true'">
+    <!-- Reuse the OpenGL ES mobile shader & Chinese font content pipeline -->
+    <MonoGameContentReference Include="..\Client.Main\MGContent\Content.Android.mgcb">
+      <Link>Content\Content.mgcb</Link>
+    </MonoGameContentReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UsePrebuiltContent)' == 'true'">
+    <BundleResource Include="PrebuiltContent\**\*.xnb">
+      <Link>Content\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </BundleResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InterfaceDefinition Remove="LaunchScreen.storyboard" />
+    <BundleResource Include="..\Client.Main\appsettings.json">
+      <Link>appsettings.json</Link>
+    </BundleResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client.Data\Client.Data.csproj" />
+    <ProjectReference Include="..\Client.Main\Client.Main.csproj"
+                      AdditionalProperties="ClientMainTargetFramework=net10.0-ios;MonoGameFramework=MonoGame.Framework.iOS" />
+  </ItemGroup>
+
+  <Target Name="RestoreDotnetTools"
+          BeforeTargets="RunContentBuilder"
+          Condition="'$(RestoreMonoGameTools)' != 'false' AND '$(DesignTimeBuild)' != 'true'">
+    <Message Text="Restoring MonoGame tools" Importance="High" />
+    <Exec Command="dotnet tool restore --tool-manifest &quot;$(MSBuildProjectDirectory)/.config/dotnet-tools.json&quot;" />
+  </Target>
+
+</Project>

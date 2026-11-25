@@ -1,0 +1,131 @@
+name: Build iOS IPA (Unsigned for Sideloadly)
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_host:
+        description: 'OpenMU Server LAN/Public IP for iPhone to connect (e.g. 192.168.50.116)'
+        required: true
+        default: '192.168.50.116'
+      server_port:
+        description: 'OpenMU ConnectServer Port'
+        required: false
+        default: '44405'
+
+jobs:
+  # Job 1: Compile iOS OpenGL ES shaders & Chinese spritefonts natively on Windows (no Wine needed)
+  build-ios-content:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          include-prerelease: false
+
+      - name: Restore MonoGame MGCB tool
+        run: dotnet tool restore --tool-manifest MuIos/.config/dotnet-tools.json
+
+      - name: Build iOS XNB content (OpenGL ES shaders + NotoSC fonts)
+        shell: pwsh
+        run: |
+          $outDir = Join-Path $PWD "prebuilt-ios-content"
+          $objDir = Join-Path $PWD "obj-ios-content"
+          dotnet mgcb /@:Client.Main/MGContent/Content.Android.mgcb /platform:iOS "/outputDir:$outDir" "/intermediateDir:$objDir" /workingDir:Client.Main/MGContent
+          Get-ChildItem -Recurse $outDir -Filter *.xnb | Select-Object Name, Length
+
+      - name: Upload prebuilt iOS content
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-prebuilt-content
+          path: prebuilt-ios-content
+          if-no-files-found: error
+
+  # Job 2: Compile ARM64 iOS app bundle on macOS using prebuilt XNB content and package unsigned IPA
+  build-ios-ipa:
+    needs: build-ios-content
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          XCODE_APP=$(ls -d /Applications/Xcode_26.0*.app 2>/dev/null | head -n 1)
+          if [ -z "$XCODE_APP" ]; then
+            XCODE_APP=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | head -n 1)
+          fi
+          if [ -n "$XCODE_APP" ]; then
+            echo "Selecting $XCODE_APP"
+            sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          fi
+          xcodebuild -version
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          include-prerelease: false
+
+      - name: Install iOS workload
+        run: dotnet workload install ios --skip-manifest-update
+
+      - name: Download prebuilt iOS XNB content
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-prebuilt-content
+          path: MuIos/PrebuiltContent
+
+      - name: Patch appsettings.json with target server IP
+        shell: pwsh
+        run: |
+          $path = "Client.Main/appsettings.json"
+          $json = Get-Content $path -Raw | ConvertFrom-Json
+          $json.MuOnlineSettings.ConnectServerHost = "${{ inputs.server_host }}"
+          $json.MuOnlineSettings.ConnectServerPort = [int]"${{ inputs.server_port }}"
+          $json | ConvertTo-Json -Depth 10 | Set-Content $path -Encoding UTF8
+
+      - name: Build unsigned iOS ARM64 app bundle
+        run: >
+          dotnet build MuIos/MuIos.csproj
+          -c Release
+          -r ios-arm64
+          -p:EnableCodeSigning=false
+          -p:RestoreMonoGameTools=false
+          -p:UsePrebuiltContent=true
+          -p:MtouchUseLlvm=false
+
+      - name: Package Payload into unsigned IPA
+        run: |
+          APP_PATH=$(find MuIos/bin/Release -type d -name "MuIos.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: MuIos.app not found!"
+            find MuIos/bin/Release -maxdepth 4
+            exit 1
+          fi
+          echo "Packaging $APP_PATH -> MuMono-iOS-unsigned.ipa"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -qry MuMono-iOS-unsigned.ipa Payload
+          ls -lh MuMono-iOS-unsigned.ipa
+
+      - name: Upload unsigned IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MuMono-iOS-unsigned-ipa
+          path: MuMono-iOS-unsigned.ipa
+          if-no-files-found: error

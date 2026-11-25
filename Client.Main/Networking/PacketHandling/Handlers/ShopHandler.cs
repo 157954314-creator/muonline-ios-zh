@@ -1,0 +1,538 @@
+using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using MUnique.OpenMU.Network.Packets.ServerToClient;
+using Client.Main.Core.Client;
+using Client.Main.Core.Utilities;
+using Client.Main.Networking;
+using Client.Main.Controls.UI.Game.Inventory;
+using Client.Main.Controls.UI;
+using Client.Main.Scenes;
+using Client.Main.Controls.UI.Game;
+using Client.Main.Controllers;
+
+namespace Client.Main.Networking.PacketHandling.Handlers
+{
+    /// <summary>
+    /// Handles packets related to NPC shops (StoreItemList etc.).
+    /// </summary>
+    public class ShopHandler : IGamePacketHandler
+    {
+        private readonly ILogger<ShopHandler> _logger;
+        private readonly CharacterState _characterState;
+        private readonly NetworkManager _networkManager;
+        private readonly TargetProtocolVersion _targetVersion;
+        private NpcWindowResponse.NpcWindow? _lastWindow;
+
+        public ShopHandler(
+            ILoggerFactory loggerFactory,
+            CharacterState characterState,
+            NetworkManager networkManager,
+            TargetProtocolVersion targetVersion)
+        {
+            _logger = loggerFactory.CreateLogger<ShopHandler>();
+            _characterState = characterState;
+            _networkManager = networkManager;
+            _targetVersion = targetVersion;
+        }
+
+        /// <summary>
+        /// 0x3F/00: shop titles of players that entered the scope. Shown above their heads.
+        /// </summary>
+        [PacketHandler(0x3F, 0x00)]
+        public Task HandlePlayerShopTitlesAsync(Memory<byte> packet)
+        {
+            if (!PlayerShopTitlesParser.TryParse(packet.Span, out var shops))
+            {
+                _logger.LogWarning("Invalid player shop titles packet ({Length} bytes).", packet.Length);
+                return Task.CompletedTask;
+            }
+
+            foreach (var (playerId, title) in shops!)
+                _characterState.PlayerShopTitles.Set((ushort)(playerId & 0x7FFF), title);
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 0x3F/08: an item of the own shop was sold. Removes it and shows a blue system message.
+        /// </summary>
+        [PacketHandler(0x3F, 0x08)]
+        public Task HandlePlayerShopItemSoldAsync(Memory<byte> packet)
+        {
+            if (!PlayerShopSoldParser.TryParse(packet.Span, out byte slot, out string buyer))
+            {
+                _logger.LogWarning("Invalid player shop item sold packet ({Length} bytes).", packet.Length);
+                return Task.CompletedTask;
+            }
+
+            _characterState.RemoveInventoryItem(slot);
+            MuGame.ScheduleOnMainThread(() =>
+                (MuGame.Instance?.ActiveScene as GameScene)?.ChatLog?.AddMessage(
+                    "System", $"Your shop item was sold to {buyer}.", Models.MessageType.Info));
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 0x3F/12: the shop dialog of the given player has to be closed (shop closed or sold out).
+        /// </summary>
+        [PacketHandler(0x3F, 0x12)]
+        public Task HandlePlayerShopDialogCloseAsync(Memory<byte> packet)
+        {
+            var data = packet.Span;
+            if (data.Length != 6 || data[0] != 0xC1 || data[1] != 6 || data[2] != 0x3F || data[3] != 0x12)
+            {
+                _logger.LogWarning("Invalid close player shop dialog packet ({Length} bytes).", packet.Length);
+                return Task.CompletedTask;
+            }
+
+            ushort owner = System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(data[4..]);
+            MuGame.ScheduleOnMainThread(() => (MuGame.Instance?.ActiveScene as GameScene)?.PlayerShop?.CloseIfOwner(owner));
+            return Task.CompletedTask;
+        }
+
+        [PacketHandler(0x3F, 0x01)]
+        public Task HandlePlayerShopPriceResponseAsync(Memory<byte> packet)
+        {
+            var data = packet.Span;
+            if (data.Length != 6 || (data[0] != 0xC3 && data[0] != 0xC1) || data[1] != 6 || data[2] != 0x3F || data[3] != 0x01)
+            {
+                _logger.LogWarning("Invalid player shop price response ({Length} bytes).", packet.Length);
+                return Task.CompletedTask;
+            }
+            if (!_characterState.CompletePlayerShopPrice(data[5], data[4] == 1))
+                _logger.LogWarning("Unexpected player shop price response for slot {Slot}.", data[5]);
+            return Task.CompletedTask;
+        }
+
+        [PacketHandler(0x3F, 0x02)]
+        public Task HandlePlayerShopOpenResponseAsync(Memory<byte> packet)
+        {
+            var data = packet.Span;
+            if (data.Length != 5 || data[1] != 5 || data[2] != 0x3F || data[3] != 0x02 || (data[0] != 0xC1 && data[0] != 0xC3))
+            {
+                _logger.LogWarning("Invalid player shop open response.");
+                return Task.CompletedTask;
+            }
+            if (data[4] == 1) _characterState.SetPlayerShopOpen(true);
+            else MuGame.ScheduleOnMainThread(() => RequestDialog.ShowInfo("The server rejected opening your shop."));
+            return Task.CompletedTask;
+        }
+
+        [PacketHandler(0x3F, 0x03)]
+        public Task HandlePlayerShopClosedAsync(Memory<byte> packet)
+        {
+            var data = packet.Span;
+            if (data.Length != 7 || data[1] != 7 || data[2] != 0x3F || data[3] != 0x03 || (data[0] != 0xC1 && data[0] != 0xC3))
+            {
+                _logger.LogWarning("Invalid player shop close response.");
+                return Task.CompletedTask;
+            }
+            ushort owner = System.Buffers.Binary.BinaryPrimitives.ReadUInt16BigEndian(data[5..]);
+            if (data[4] == 1 && owner == _characterState.Id) _characterState.SetPlayerShopOpen(false);
+            if (data[4] == 1 && owner != _characterState.Id)
+                _characterState.PlayerShopTitles.Remove((ushort)(owner & 0x7FFF));
+            if (data[4] == 1 && owner != _characterState.Id)
+                MuGame.ScheduleOnMainThread(() => (MuGame.Instance?.ActiveScene as GameScene)?.PlayerShop?.CloseIfOwner(owner));
+            return Task.CompletedTask;
+        }
+
+        [PacketHandler(0x3F, 0x05)]
+        public Task HandlePlayerShopListAsync(Memory<byte> packet)
+        {
+            if (!PlayerShopListParser.TryParse(packet.Span, _targetVersion == TargetProtocolVersion.Season6, out var shop))
+            {
+                _logger.LogWarning("Invalid or unsupported player shop list ({Length} bytes).", packet.Length);
+                MuGame.ScheduleOnMainThread(() => RequestDialog.ShowInfo("Could not read the player shop offer."));
+                return Task.CompletedTask;
+            }
+
+            MuGame.ScheduleOnMainThread(() =>
+            {
+                var window = (MuGame.Instance?.ActiveScene as GameScene)?.PlayerShop;
+                if (window?.AcceptList(shop.OwnerId, shop.OwnerName, shop.ShopName, shop.Items, shop.IsUpdate) == true)
+                    window.BringToFront();
+            });
+            return Task.CompletedTask;
+        }
+
+        [PacketHandler(0x3F, 0x13)]
+        public Task HandlePlayerShopListUpdateAsync(Memory<byte> packet) => HandlePlayerShopListAsync(packet);
+
+        [PacketHandler(0x3F, 0x06)]
+        public Task HandlePlayerShopBuyResultAsync(Memory<byte> packet)
+        {
+            if (!PlayerShopBuyResultParser.TryParse(packet.Span, _targetVersion == TargetProtocolVersion.Season6, out var result))
+            {
+                _logger.LogWarning("Invalid player shop purchase response ({Length} bytes).", packet.Length);
+                MuGame.ScheduleOnMainThread(() => RequestDialog.ShowInfo("Could not read the purchase response. Check your inventory before trying again."));
+                return Task.CompletedTask;
+            }
+
+            if (result.Success)
+                _characterState.AddOrUpdateInventoryItem(result.InventorySlot, result.ItemData);
+
+            MuGame.ScheduleOnMainThread(() =>
+            {
+                (MuGame.Instance?.ActiveScene as GameScene)?.PlayerShop?.PurchaseFinished(result.SellerId, result.Success);
+                if (!result.Success)
+                    RequestDialog.ShowInfo($"Purchase failed (server result {result.Result}).");
+            });
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// NpcWindowResponse: Open shop window when server requests a merchant window.
+        /// </summary>
+        [PacketHandler(0x30, PacketRouter.NoSubCode)]
+        public Task HandleNpcWindowResponseAsync(Memory<byte> packet)
+        {
+            try
+            {
+                var resp = new NpcWindowResponse(packet);
+                _lastWindow = resp.Window;
+
+                if (resp.Window == NpcWindowResponse.NpcWindow.Merchant || resp.Window == NpcWindowResponse.NpcWindow.Merchant1)
+                {
+                    _characterState.ClearShopItems();
+
+                    // Check if the NPC can repair items using the last NPC type number
+                    bool canRepair = false;
+                    if (_characterState.LastNpcTypeNumber != 0)
+                    {
+                        canRepair = NpcDatabase.CanNpcRepair(_characterState.LastNpcTypeNumber);
+                        _logger.LogDebug("NPC type {TypeId} CanRepair = {CanRepair}",
+                            _characterState.LastNpcTypeNumber, canRepair);
+                    }
+
+                    MuGame.ScheduleOnMainThread(() =>
+                    {
+                        var shop = NpcShopControl.Instance;
+                        shop.SetRepairShop(canRepair);
+                        shop.Visible = true;
+                        shop.BringToFront();
+
+                        // Also open the inventory side-by-side
+                        var scene = MuGame.Instance?.ActiveScene as GameScene;
+                        scene?.InventoryControl?.Show();
+                    });
+                }
+                else if (resp.Window == NpcWindowResponse.NpcWindow.VaultStorage)
+                {
+                    _characterState.ClearVaultItems();
+                    MuGame.ScheduleOnMainThread(() =>
+                    {
+                        var vault = VaultControl.Instance;
+                        vault.Visible = true;
+                        vault.BringToFront();
+                        var scene = MuGame.Instance?.ActiveScene as GameScene;
+                        scene?.InventoryControl?.Show();
+                    });
+                }
+                else if (resp.Window == NpcWindowResponse.NpcWindow.ChaosMachine)
+                {
+                    _characterState.ClearChaosMachineItems();
+                    MuGame.ScheduleOnMainThread(() =>
+                    {
+                        var chaos = ChaosMixControl.Instance;
+                        chaos.Show();
+
+                        var scene = MuGame.Instance?.ActiveScene as GameScene;
+                        scene?.InventoryControl?.Show();
+                    });
+                }
+                else if (resp.Window == NpcWindowResponse.NpcWindow.DevilSquare)
+                {
+                    MuGame.ScheduleOnMainThread(() =>
+                    {
+                        DevilSquareEnterControl.Instance.ShowWindow();
+                    });
+                }
+                else if (resp.Window == NpcWindowResponse.NpcWindow.BloodCastle)
+                {
+                    MuGame.ScheduleOnMainThread(() =>
+                    {
+                        BloodCastleEnterControl.Instance.ShowWindow();
+                    });
+                }
+                else
+                {
+                    // e.g. IllusionTemple, LugardDoppelgangerEntry, JerintGaionEvententry, SeedMaster,
+                    // Lahap, PetTrainer – the NPC talk succeeded but the client has no window for it yet.
+                    _logger.LogInformation("NPC window {Window} ({Id}) has no client UI yet; closing the NPC dialog.", resp.Window, (byte)resp.Window);
+                    if (resp.Window == NpcWindowResponse.NpcWindow.IllusionTemple)
+                        MuGame.ScheduleOnMainThread(() => RequestDialog.ShowInfo("Illusion Temple is not available on this server yet."));
+                    // The server is now in NpcDialogOpened and rejects talking to other NPCs until the dialog is
+                    // closed. The original client sends CloseNpcRequest from every NPC window's ClosingProcess.
+                    _ = MuGame.Network?.GetCharacterService()?.SendCloseNpcRequestAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing NpcWindowResponse packet.");
+            }
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// StoreItemList: Sent when opening merchant NPC or vault. Displays items in the opened window.
+        /// </summary>
+        [PacketHandler(0x31, PacketRouter.NoSubCode)]
+        public Task HandleStoreItemListAsync(Memory<byte> packet)
+        {
+            try
+            {
+                var span = packet.Span;
+                if (span.Length < 6)
+                {
+                    _logger.LogWarning("StoreItemList packet too short: {Length}", packet.Length);
+                    return Task.CompletedTask;
+                }
+
+                var list = new StoreItemList(packet);
+                byte count = list.ItemCount;
+                int offset = 6;
+
+                // Determine item data size by protocol version (matches inventory parsing)
+                int dataSize = _targetVersion switch
+                {
+                    TargetProtocolVersion.Season6 => 12,
+                    TargetProtocolVersion.Version097 => 11,
+                    TargetProtocolVersion.Version075 => 7,
+                    _ => 12
+                };
+
+                _logger.LogInformation("StoreItemList received: Type={Type}, Count={Count}, DataSize={Size}", list.Type, count, dataSize);
+
+                bool isMixResultList = _targetVersion >= TargetProtocolVersion.Season6 &&
+                    (list.Type == StoreItemList.ItemWindow.ChaosMachine || list.Type == StoreItemList.ItemWindow.ResurrectionFailed);
+                bool toChaosMachine = _lastWindow == NpcWindowResponse.NpcWindow.ChaosMachine || isMixResultList || list.Type == StoreItemList.ItemWindow.ChaosMachine;
+                bool toVault = !toChaosMachine && _lastWindow == NpcWindowResponse.NpcWindow.VaultStorage;
+
+                if (isMixResultList)
+                {
+                    MuGame.ScheduleOnMainThread(() =>
+                    {
+                        SoundController.Instance.PlayBuffer("Sound/eMix.wav");
+                        SoundController.Instance.PlayBuffer("Sound/eBreak.wav");
+                    });
+                }
+
+                if (toChaosMachine)
+                {
+                    _characterState.ClearChaosMachineItems();
+                }
+                else if (toVault)
+                {
+                    _characterState.ClearVaultItems();
+                }
+                else
+                {
+                    _characterState.ClearShopItems();
+                }
+
+                int parsedItems = 0;
+
+                if (_targetVersion >= TargetProtocolVersion.Season6)
+                {
+                    int pos = offset;
+                    int remaining = Math.Max(0, span.Length - offset);
+                    bool fixedLength = count > 0 && remaining == count * (1 + 12);
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (pos + 1 > span.Length)
+                        {
+                            _logger.LogWarning("StoreItemList too short while reading slot at item {Index}.", i);
+                            break;
+                        }
+
+                        byte slot = span[pos];
+                        pos += 1;
+
+                        ReadOnlySpan<byte> itemSpan = span.Slice(pos);
+                        int length = 12;
+
+                        if (!fixedLength)
+                        {
+                            if (!ItemDataParser.TryGetExtendedItemLength(itemSpan, out length) || pos + length > span.Length)
+                            {
+                                // Backward compatibility with classic fixed-length store items.
+                                if (pos + 12 <= span.Length)
+                                {
+                                    length = 12;
+                                    _logger.LogDebug(
+                                        "StoreItemList item {Index}: extended length parse failed, falling back to 12-byte item data.",
+                                        i);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("StoreItemList item {Index} has invalid data length.", i);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (pos + length > span.Length)
+                        {
+                            _logger.LogWarning("StoreItemList too short while reading item {Index} data.", i);
+                            break;
+                        }
+
+                        var data = span.Slice(pos, length).ToArray();
+                        pos += length;
+
+                        if (toChaosMachine) _characterState.AddOrUpdateChaosMachineItem(slot, data);
+                        else if (toVault) _characterState.AddOrUpdateVaultItem(slot, data);
+                        else _characterState.AddOrUpdateShopItem(slot, data);
+
+                        parsedItems++;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var si = list[i, StoredItem.GetRequiredSize(dataSize)];
+                        byte slot = si.ItemSlot;
+                        var data = si.ItemData.Slice(0, dataSize).ToArray();
+
+                        if (toChaosMachine) _characterState.AddOrUpdateChaosMachineItem(slot, data);
+                        else if (toVault) _characterState.AddOrUpdateVaultItem(slot, data);
+                        else _characterState.AddOrUpdateShopItem(slot, data);
+
+                        parsedItems++;
+                    }
+                }
+
+                _logger.LogInformation(
+                    "StoreItemList parsed: requested={Requested}, parsed={Parsed}, target={Target}",
+                    count,
+                    parsedItems,
+                    toChaosMachine ? "ChaosMachine" : toVault ? "Vault" : "Shop");
+
+                if (toChaosMachine) _characterState.RaiseChaosMachineItemsChanged();
+                else if (toVault) _characterState.RaiseVaultItemsChanged();
+                else _characterState.RaiseShopItemsChanged();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing StoreItemList packet.");
+            }
+            return Task.CompletedTask;
+        }
+
+        [PacketHandler(0x86, PacketRouter.NoSubCode)] // ItemCraftingResult
+        public Task HandleItemCraftingResultAsync(Memory<byte> packet)
+        {
+            try
+            {
+                var res = new ItemCraftingResult(packet);
+                _logger.LogInformation("ItemCraftingResult: Result={Result}", res.Result);
+
+                MuGame.ScheduleOnMainThread(() =>
+                {
+                    ChaosMixControl.Instance?.NotifyCraftingResult(res.Result);
+
+                    var scene = MuGame.Instance?.ActiveScene as GameScene;
+                    string msg = res.Result switch
+                    {
+                        ItemCraftingResult.CraftingResult.Success => "Mix succeeded.",
+                        ItemCraftingResult.CraftingResult.Failed => "Mix failed.",
+                        ItemCraftingResult.CraftingResult.NotEnoughMoney => "Not enough Zen.",
+                        ItemCraftingResult.CraftingResult.TooManyItems => "Too many items in mix box.",
+                        ItemCraftingResult.CraftingResult.CharacterLevelTooLow => "Character level too low.",
+                        ItemCraftingResult.CraftingResult.LackingMixItems => "Missing required items.",
+                        ItemCraftingResult.CraftingResult.IncorrectMixItems => "Incorrect mix items.",
+                        ItemCraftingResult.CraftingResult.InvalidItemLevel => "Invalid item level.",
+                        ItemCraftingResult.CraftingResult.CharacterClassTooLow => "Character class too low.",
+                        _ => $"Mix result: {res.Result}"
+                    };
+
+                    scene?.ChatLog?.AddMessage("System", msg, Client.Main.Models.MessageType.System);
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing ItemCraftingResult packet.");
+            }
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Handle 0x32 (Buy) results. For this family, some packets have no subcode (ItemBought),
+        /// and failure (NpcItemBuyFailed) is a short 4-byte packet which some servers send with subcode.
+        /// We treat all 0x32 as 'no subcode' in the router and differentiate by length here.
+        /// </summary>
+        [PacketHandler(0x32, PacketRouter.NoSubCode)]
+        public Task HandleNpcBuyResultsAsync(Memory<byte> packet)
+        {
+            try
+            {
+                // Failure case: C1 04 32 FF (len = 4)
+                if (packet.Length == NpcItemBuyFailed.Length)
+                {
+                    _logger.LogWarning("NPC item buy failed. Packet len={Len}", packet.Length);
+                    MuGame.ScheduleOnMainThread(() =>
+                    {
+                        string reason = ChatMessageHandler.TryGetRecentBlueSystemMessage(2000);
+                        if (string.IsNullOrWhiteSpace(reason))
+                        {
+                            reason = "Purchase failed. Please check Zen or space.";
+                        }
+                        RequestDialog.ShowInfo(reason);
+                    });
+                    return Task.CompletedTask;
+                }
+
+                // Success case: ItemBought (C1 0x32, no subcode). Contains inventory slot + item data
+                var bought = new ItemBought(packet);
+                byte slot = bought.InventorySlot;
+                var data = bought.ItemData.ToArray();
+
+                _characterState.AddOrUpdateInventoryItem(slot, data);
+                _logger.LogInformation("Item bought to inventory slot {Slot}: {Name}", slot, ItemDatabase.GetItemName(data) ?? "Item");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling 0x32 buy result packet.");
+            }
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Handles result of sell item to NPC (0x33). Updates money is handled elsewhere; here we cleanup inventory.
+        /// </summary>
+        [PacketHandler(0x33, PacketRouter.NoSubCode)]
+        public Task HandleNpcItemSellResultAsync(Memory<byte> packet)
+        {
+            try
+            {
+                var res = new NpcItemSellResult(packet);
+                _logger.LogInformation("NpcItemSellResult: Success={Success}, Money={Money}", res.Success, res.Money);
+                if (res.Success)
+                {
+                    if (_characterState.TryConsumePendingSellSlot(out byte soldSlot))
+                    {
+                        _characterState.RemoveInventoryItem(soldSlot);
+                    }
+                    else
+                    {
+                        // No pending slot tracked; trigger a full refresh to stay in sync
+                        _characterState.RaiseInventoryChanged();
+                    }
+                }
+                else
+                {
+                    // Sell failed; just raise refresh to restore UI state, if needed
+                    _characterState.RaiseInventoryChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling NpcItemSellResult packet.");
+            }
+            return Task.CompletedTask;
+        }
+    }
+}

@@ -1,0 +1,412 @@
+using System;
+using System.Collections.Generic;
+
+namespace Client.Data.BMD
+{
+    /// <summary>
+    /// Static definitions for skills based on original MU client source code.
+    /// Provides skill type and animation mappings that are not stored in BMD files.
+    /// </summary>
+    public static class SkillDefinitions
+    {
+        private const string RageBuffSound1 = "Sound/Ragefighter/Rage_Buff_1.wav";
+        private const string RageBuffSound2 = "Sound/Ragefighter/Rage_Buff_2.wav";
+
+        /// <summary>
+        /// Mapping of skill IDs to their types (AREA/TARGET/SELF).
+        /// Based on SendRequestMagic vs SendRequestMagicContinue in original client.
+        /// </summary>
+        private static readonly Dictionary<int, SkillType> SkillTypes = new()
+        {
+            // ID 1-10: Wizard Skills
+            { 1, SkillType.Target },   // Poison
+            { 2, SkillType.Target },   // Meteorite
+            { 3, SkillType.Target },   // Lightning
+            { 4, SkillType.Target },   // Fire Ball
+            { 5, SkillType.Area },     // Flame
+            { 6, SkillType.Area },     // Teleport
+            { 7, SkillType.Target },   // Ice
+            { 8, SkillType.Area },     // Twister
+            { 9, SkillType.Area },   // Evil Spirit
+            { 10, SkillType.Area },    // Hellfire
+
+            // ID 11-25: Mixed Skills
+            { 11, SkillType.Target },  // Power Wave
+            { 12, SkillType.Area },  // Aqua Beam
+            { 13, SkillType.Area },    // Cometfall
+            { 14, SkillType.Area },    // Inferno
+            { 15, SkillType.Self },    // Teleport Ally
+            { 16, SkillType.Target },    // Soul Barrier
+            { 17, SkillType.Target },  // Energy Ball
+            { 18, SkillType.Self },    // Defense
+            { 19, SkillType.Target },    // Falling Slash
+            { 20, SkillType.Target },  // Lunge
+            { 21, SkillType.Target },  // Uppercut
+            { 22, SkillType.Target },    // Cyclone
+            { 23, SkillType.Target },  // Slash
+            { 24, SkillType.Area },    // Triple Shot (SkillElf: SendRequestMagicContinue, ZzzInterface.cpp:3145)
+            { 26, SkillType.Target },  // Heal
+
+            // ID 27-52: Elf/Summoner Skills
+            { 27, SkillType.Self },    // Greater Defense
+            { 28, SkillType.Self },    // Greater Damage
+            { 30, SkillType.Self },    // Summon Goblin
+            { 31, SkillType.Self },    // Summon Stone Golem
+            { 32, SkillType.Self },    // Summon Assassin
+            { 33, SkillType.Self },    // Summon Elite Yeti
+            { 34, SkillType.Self },    // Summon Dark Knight
+            { 35, SkillType.Self },    // Summon Bali
+            { 36, SkillType.Self },    // Summon Soldier
+            { 38, SkillType.Area },    // Decay
+            { 39, SkillType.Area },    // Ice Storm
+            { 40, SkillType.Target },  // Nova
+            { 41, SkillType.Area },    // Twisting Slash
+            { 42, SkillType.Area },    // Rageful Blow
+            { 43, SkillType.Target },  // Death Stab
+            { 44, SkillType.Target },  // Crescent Moon Slash
+            { 45, SkillType.Target },  // Lance
+            { 46, SkillType.Target },  // Deep Impact
+            { 47, SkillType.Target },  // Impale
+            { 48, SkillType.Self },    // Swell Life
+            { 49, SkillType.Target },  // Fire Breath
+            { 51, SkillType.Target },  // Ice Arrow
+            { 52, SkillType.Area },    // Penetration (AttackElf: SendRequestMagicContinue, ZzzInterface.cpp:4831)
+
+            // ID 55-79: Dark Lord/Mixed Skills
+            { 55, SkillType.Area },    // Fire Slash
+            { 56, SkillType.Target },  // Power Slash
+            { 57, SkillType.Target },  // Spiral Slash
+            { 60, SkillType.Self },    // Force
+            { 61, SkillType.Target },  // Fire Burst
+            { 508, SkillType.Target }, // Fire Burst Strength
+            { 514, SkillType.Target }, // Fire Burst Mastery
+            { 62, SkillType.Area },    // Earthshake
+            { 63, SkillType.Self },    // Summon
+            { 64, SkillType.Self },    // Increase Critical Damage
+            { 65, SkillType.Target },  // Electric Spike
+            { 66, SkillType.Target },  // Force Wave
+            { 67, SkillType.Area },    // Stun
+            { 68, SkillType.Self },    // Cancel Stun
+            { 69, SkillType.Self },    // Swell Mana
+            { 70, SkillType.Self },    // Invisibility
+            { 71, SkillType.Self },    // Cancel Invisibility
+            { 72, SkillType.Self },    // Abolish Magic
+            { 73, SkillType.Target },  // Mana Rays
+            { 74, SkillType.Target },  // Fire Blast
+            { 76, SkillType.Area },    // Plasma Storm
+            { 77, SkillType.Self },    // Infinity Arrow
+            { 78, SkillType.Area },    // Fire Scream
+            { 79, SkillType.Area },    // Explosion
+
+            // ID 200-225: Summoner Skills
+            { 200, SkillType.Self },   // Summon Monster
+            { 201, SkillType.Self },   // Magic Attack Immunity
+            { 202, SkillType.Self },   // Physical Attack Immunity
+            { 203, SkillType.Self },   // Potion of Bless
+            { 204, SkillType.Self },   // Potion of Soul
+            { 210, SkillType.Self },   // Spell of Protection
+            { 211, SkillType.Self },   // Spell of Restriction
+            { 212, SkillType.Self },   // Spell of Pursuit
+            { 213, SkillType.Target }, // Shield-Burn
+            { 214, SkillType.Area },   // Drain Life (area request with target key)
+            { 458, SkillType.Area },   // Drain Life Strengthener
+            { 215, SkillType.Area },   // Chain Lightning
+            { 217, SkillType.Self },   // Damage Reflection
+            { 218, SkillType.Self },   // Berserker
+            { 219, SkillType.Target }, // Sleep
+            { 220, SkillType.Target }, // Blind
+            { 221, SkillType.Target }, // Weakness
+            { 222, SkillType.Target }, // Innovation
+            { 223, SkillType.Area },   // Explosion
+            { 224, SkillType.Target }, // Requiem
+            { 225, SkillType.Area },   // Pollution
+
+            // ID 230-270: Dark Lord/Rage Fighter Skills
+            { 230, SkillType.Area },   // Lightning Shock
+            { 456, SkillType.Area },   // Lightning Shock Strength
+            { 232, SkillType.Area },   // Strike of Destruction
+            { 233, SkillType.Self },   // Expansion of Wizardry
+            { 234, SkillType.Self },   // Recovery
+            { 235, SkillType.Area },   // Multi-Shot
+            { 236, SkillType.Area },   // Flame Strike
+            { 237, SkillType.Area },   // Gigantic Storm
+            { 238, SkillType.Area },   // Chaotic Diseier
+            { 260, SkillType.Target }, // Killing Blow
+            { 261, SkillType.Target }, // Beast Uppercut
+            { 262, SkillType.Target }, // Chain Drive
+            { 263, SkillType.Target }, // Dark Side
+            { 264, SkillType.Target }, // Dragon Roar
+            { 265, SkillType.Area },   // Dragon Slasher
+            { 266, SkillType.Self },   // Ignore Defense
+            { 267, SkillType.Self },   // Increase Health
+            { 268, SkillType.Self },   // Increase Block
+            { 269, SkillType.Target }, // Charge
+            { 270, SkillType.Target }, // Phoenix Shot
+
+            // Ice Storm master variants (Ice Up I-V)
+            { 302, SkillType.Area },   // Ice Up
+            { 303, SkillType.Area },   // Ice Up II
+            { 304, SkillType.Area },   // Ice Up III
+            { 305, SkillType.Area },   // Ice Up IV
+            { 306, SkillType.Area },   // Ice Up V
+
+            // Earthquake master variants (Earth Shake I-V)
+            { 515, SkillType.Area },
+            { 516, SkillType.Area },
+            { 517, SkillType.Area },
+            { 518, SkillType.Area },
+            { 519, SkillType.Area },
+
+            // ID 495: Earth Prison
+            { 495, SkillType.Area },   // Earth Prison
+
+            // ID 565: Blood Howling
+            { 565, SkillType.Self },   // Blood Howling
+        };
+
+        /// <summary>
+        /// Mapping of skill IDs to their animation IDs.
+        /// Based on SetAction calls in original client ZzzInterface.cpp.
+        /// Returns -1 for skills using generic magic/attack animations.
+        /// </summary>
+        private static readonly Dictionary<int, int> SkillAnimations = BuildSkillAnimations();
+
+        /// <summary>
+        /// Mapping of skill IDs to their sound file paths.
+        /// Based on original client sound effects for each skill.
+        /// </summary>
+        private static readonly Dictionary<int, string> SkillSounds = BuildSkillSounds();
+
+        /// <summary>
+        /// Gets the skill type for a given skill ID.
+        /// Returns TARGET by default if not found.
+        /// </summary>
+        public static SkillType GetSkillType(int skillId)
+        {
+            return SkillTypes.TryGetValue(skillId, out var type) ? type : SkillType.Target;
+        }
+
+        /// <summary>
+        /// Gets the animation ID for a given skill ID.
+        /// Returns -1 if the skill uses generic magic/attack animation.
+        /// </summary>
+        public static int GetSkillAnimation(int skillId)
+        {
+            return SkillAnimations.TryGetValue(skillId, out var animId) ? animId : -1;
+        }
+
+        /// <summary>
+        /// Gets the sound file path for a given skill ID.
+        /// Returns null if the skill has no specific sound mapping.
+        /// </summary>
+        public static string? GetSkillSound(int skillId)
+        {
+            if (skillId is 266 or 267 or 268)
+                return Random.Shared.Next(2) == 0 ? RageBuffSound1 : RageBuffSound2;
+
+            return SkillSounds.TryGetValue(skillId, out var soundPath) ? soundPath : null;
+        }
+
+        private static Dictionary<int, int> BuildSkillAnimations()
+        {
+            var map = new Dictionary<int, int>();
+
+            void Add(int skillId, int animationId)
+            {
+                if (!map.TryAdd(skillId, animationId))
+                {
+                    // Prefer the first mapping we encountered (matches Main 5.2 behaviour).
+                    return;
+                }
+            }
+
+            // WARRIOR/KNIGHT SKILLS
+            Add(18, 186);   // Defense → PlayerDefense1 (ReceiveAction AT_SKILL_BLOCKING; no effect)
+            // ReceiveMagic: PLAYER_ATTACK_SKILL_SWORD1 + (MagicNumber - AT_SKILL_SWORD1)
+            Add(19, 60);    // Falling Slash → PlayerAttackSkillSword1
+            Add(20, 61);    // Lunge → PlayerAttackSkillSword2
+            Add(21, 62);    // Uppercut → PlayerAttackSkillSword3
+            Add(22, 63);    // Cyclone → PlayerAttackSkillSword4
+            Add(23, 64);    // Slash → PlayerAttackSkillSword5 (every 2nd cast: PlayerObject.ApplySlashSwordCount)
+            Add(43, 71);    // Death Stab → PlayerAttackDeathstab
+            Add(49, 68);    // Fire Breath → PlayerSkillRider (_FLY in Tarkan / Heaven / Maya, not mapped)
+            Add(47, 70);    // Impale → PlayerAttackSkillSpear (Fenrir: PlayerFenrirAttackSpear, not mapped)
+            Add(41, 65);    // Twisting Slash → PlayerAttackSkillWheel
+            Add(42, 66);    // Rageful Blow → PlayerAttackSkillFuryStrike
+
+            // WIZARD/SUMMONER SKILLS
+            Add(6, 151);    // Teleport → PlayerSkillTeleport
+            Add(10, 154);   // HellFire → PlayerSkillHell
+            Add(12, 152);   // Aqua Beam → PlayerSkillFlash (Cometfall 13: SetPlayerMagic, generic)
+            Add(14, 153);   // Inferno → PlayerSkillInferno
+            Add(40, 73);    // Nova release → PlayerSkillHellStart
+            Add(58, 72);    // Nova start/charge → PlayerSkillHellBegin
+            Add(214, 168);  // Drain Life → PlayerSkillDrainLife
+            Add(458, 168);  // Drain Life Strengthener → PlayerSkillDrainLife
+            Add(215, 160);  // Chain Lightning → PlayerSkillChainLightning
+            Add(217, 156);  // Thorns → PlayerSkillSleep (WSclient.cpp:4598)
+            Add(219, 156);  // Sleep → PlayerSkillSleep
+            Add(220, 156);  // Blind → PlayerSkillSleep (WSclient.cpp:4590)
+            Add(230, 185);  // Lightning Shock → PlayerSkillLightningShock
+            Add(456, 185);  // Lightning Shock Strength → PlayerSkillLightningShock
+            Add(221, 156);  // Weakness → PlayerSkillSleep
+            Add(222, 156);  // Innovation → PlayerSkillSleep
+            Add(218, 156);  // Berserker → PlayerSkillSleep (WSclient.cpp:4608)
+
+            // DARK LORD SKILLS
+            // Fire Scream (78) does NOT use an animation from this table: the original
+            // client casts it with the Dark Lord strike family (PLAYER_ATTACK_STRIKE and its
+            // riding/Fenrir variants), which PlayerObject.GetSkillAction resolves.
+            Add(236, 184);  // Flame Strike → PlayerSkillFlamestrike
+            Add(237, 183);  // Gigantic Storm → PlayerSkillGiganticstorm (WSclient.cpp:5222)
+            Add(232, 176);  // Strike of Destruction → PlayerSkillBlowOfDestruction
+            Add(56, 145);   // Power Slash → PlayerAttackTwoHandSwordTwo
+            Add(57, 136);   // Spiral Slash → PlayerAttackOneFlash
+            Add(62, 87);    // Earthquake → PlayerAttackDarkhorse
+            Add(515, 87);   // Earth Shake I → PlayerAttackDarkhorse
+            Add(516, 87);   // Earth Shake II → PlayerAttackDarkhorse
+            Add(517, 87);   // Earth Shake III → PlayerAttackDarkhorse
+            Add(518, 87);   // Earth Shake IV → PlayerAttackDarkhorse
+            Add(519, 87);   // Earth Shake V → PlayerAttackDarkhorse
+
+            // ELF SKILLS
+            Add(234, 246);  // Recovery → PlayerRecoverSkill
+            Add(46, 178);   // Deep Impact → PlayerSkillMultishotBowStand
+            Add(235, 178);  // Multi-Shot → PlayerSkillMultishotBowStand
+
+            // RAGE FIGHTER SKILLS
+            Add(73, 138);   // Mana Rays → PlayerAttackDeathCannon (ReceiveMagic: AT_SKILL_DEATH_CANNON)
+            Add(260, 247);  // Killing Blow → PlayerSkillThrust
+            Add(261, 248);  // Beast Uppercut → PlayerSkillStamp
+            Add(262, 249);  // Chain Drive → PlayerSkillGiantswing
+            Add(263, 250);  // Dark Side → PlayerSkillDarksideReady
+            Add(264, 253);  // Dragon Roar → PlayerSkillDragonlore (MonkSystem: AT_SKILL_DRAGON_LOWER)
+            Add(265, 252);  // Dragon Slasher → PlayerSkillDragonkick (MonkSystem: AT_SKILL_DRAGON_KICK)
+            Add(269, 137);  // Charge → PlayerAttackRush (ReceiveMagic: AT_SKILL_OCCUPY)
+            Add(270, 254);  // Phoenix Shot → PlayerSkillPhoenixShot
+            Add(48, 255);   // Swell Life → PlayerSkillAttUpOurforces
+
+            // SPECIAL SKILLS
+            Add(76, 102);   // Plasma Storm → PlayerFenrirSkill
+            Add(565, 257);  // Blood Howling → PlayerSkillBloodHowling
+
+            return map;
+        }
+
+        /// <summary>
+        /// Checks if a skill is an area/directional skill.
+        /// </summary>
+        public static bool IsAreaSkill(int skillId)
+        {
+            return GetSkillType(skillId) == SkillType.Area;
+        }
+
+        /// <summary>
+        /// Checks if a skill is a target-required skill.
+        /// </summary>
+        public static bool IsTargetSkill(int skillId)
+        {
+            return GetSkillType(skillId) == SkillType.Target;
+        }
+
+        /// <summary>
+        /// Checks if a skill is a self-cast skill.
+        /// </summary>
+        public static bool IsSelfSkill(int skillId)
+        {
+            return GetSkillType(skillId) == SkillType.Self;
+        }
+
+        private static Dictionary<int, string> BuildSkillSounds()
+        {
+            var map = new Dictionary<int, string>();
+
+            // WARRIOR/KNIGHT SKILLS
+            map[18] = "Sound/sKnightDefense.wav";        // Defense (ID 18)
+            map[19] = "Sound/sKnightSkill1.wav";         // Falling Slash (ID 19)
+            map[20] = "Sound/sKnightSkill2.wav";         // Lunge (ID 20)
+            map[21] = "Sound/sKnightSkill3.wav";         // Uppercut (ID 21)
+            map[22] = "Sound/sKnightSkill4.wav";         // Cyclone (ID 22)
+            map[23] = "Sound/sKnightSkill4.wav";         // Slash (ID 23) – ReceiveMagic AT_SKILL_SWORD5
+            map[57] = "Sound/sKnightSkill2.wav";         // Spiral Slash: ReceiveMagic
+            // Twisting Slash (ID 41): SOUND_SKILL_SWORD4 is played at release by TwistingSlashEffect
+            map[59] = "Sound/eCombo.wav";                // Combo (ID 59)
+
+            // ELF SKILLS
+            map[26] = "Sound/sKnightDefense.wav";        // Healing (ID 26)
+            map[24] = "Sound/eRaidShoot.wav";            // Triple Shot (ID 24)
+            map[77] = "Sound/infinityArrow.wav";          // Infinity Arrow (ID 77)
+
+            // WIZARD SKILLS
+            // Fireball (ID 4): SOUND_METEORITE01 is played at release by FireBallEffect
+            // Power Wave (ID 11): SOUND_MAGIC is played at release by PowerWaveEffect
+            map[3] = "Sound/eThunder.wav";               // Lightning (ID 3)
+            map[6] = "Sound/sMagic.wav";                 // Teleport (ID 6) – CreateTeleportBegin SOUND_MAGIC
+            // Meteorite (ID 2): SOUND_METEORITE01 is played at release by FireBallEffect (meteor)
+            // Ice (ID 7): SOUND_ICE is played at release by IceEffect
+            // Poison (ID 1): SOUND_HEART is played at release by PoisonEffect
+            // Flame (ID 5): SOUND_FLAME is played at release by FlameEffect
+            // Twister (ID 8) and Evil Spirit (ID 9) play sounds from their effects.
+            // Hellfire (ID 10) plays its sound from ScrollOfHellFireEffect.
+            // Aqua Beam (ID 12) plays its sound from ScrollOfAquaBeamEffect.
+            // Cometfall (ID 13): no packet sound; BITMAP_EXPLOTION plays SOUND_EXPLOTION01 on impact (CometfallEffect)
+            // Inferno (ID 14) plays its sound from ScrollOfInfernoEffect.
+            map[15] = "Sound/eTelekinesis.wav";          // Teleport Ally (ID 15)
+            map[16] = "Sound/eSoulBarrier.wav";          // Soul Barrier (ID 16)
+            // Energy Ball (ID 17): SOUND_MAGIC is played at release by EnergyBallEffect
+            map[58] = "Sound/eHellFire2_1.wav";          // Nova charge start (ID 58)
+
+            // MIXED SKILLS
+            // Penetration (ID 52): SOUND_PIERCING is played at AttackTime 3 by PenetrationGatherEffect
+            map[51] = "Sound/eIceArrow.wav";             // Ice Arrow (ID 51)
+            // Fire Breath (ID 49): SOUND_SKILL_SWORD3 is played at release by FireBreathEffect
+            // Impale (ID 47): SOUND_RIDINGSPEAR is played at AttackTime 10 by ImpaleEffect
+            // Swell Life (ID 48): SOUND_SWELLLIFE is played at release by SwellLifeCastEffect
+            map[56] = "Sound/sKnightSkill4.wav";         // Power Slash (ID 56) – ReceiveMagic AT_SKILL_ICE_BLADE
+
+            // DARK LORD SKILLS
+            map[60] = "Sound/sKnightSkill1.wav";         // Force (ID 60) – ReceiveMagic SOUND_SKILL_SWORD1
+            map[66] = map[60];                             // Force Wave (ID 66)
+            map[62] = "Sound/sDarkEarthQuake.wav";       // Earthshake (ID 62)
+            map[515] = map[62];                            // Earth Shake I
+            map[516] = map[62];                            // Earth Shake II
+            map[517] = map[62];                            // Earth Shake III
+            map[518] = map[62];                            // Earth Shake IV
+            map[519] = map[62];                            // Earth Shake V
+            map[61] = "Sound/eFirebust.wav";             // Fire Burst (ID 61)
+            map[508] = "Sound/eFirebust.wav";            // Fire Burst Strength
+            map[514] = "Sound/eFirebust.wav";            // Fire Burst Mastery
+            map[78] = "Sound/Darklord_firescream.wav";   // Fire Scream (ID 78)
+
+            // SUMMONER SKILLS
+            map[219] = "Sound/SE_Ch_summoner_skill03_sleep.wav";          // Sleep (ID 219)
+            // Chain Lightning (ID 215): SOUND_SKILL_CHAIN_LIGHTNING is played at release by ChainLightningCastEffect
+            // Electric Spike (ID 65): SOUND_ELEC_STRIKE is played at release by ElectricSpikeEffect
+            map[220] = "Sound/SE_Ch_summoner_skill04_blind.wav";          // Blind (ID 220)
+            map[217] = "Sound/SE_Ch_summoner_skill02_ssonze.wav";         // Thorns (ID 217)
+            // Weakness (221) / Innovation (222): SOUND_SKILL_WEAKNESS / _ENERVATION are played at release by SummonerCurseEffect
+
+            // MASTER SKILLS
+            map[218] = "Sound/Berserker.wav";            // Berserker (ID 218)
+            // Gigantic Storm (ID 237): SOUND_SKILL_GIGANTIC_STORM is played at release by GiganticStormEffect
+            // Flame Strike (236): SOUND_SKILL_FLAME_STRIKE plays at release.
+            map[238] = "Sound/caotic.wav";               // Chaotic Diseier (ID 238)
+            map[233] = "Sound/SwellofMagicPower.wav";    // Swell of Magicpower (ID 233)
+            map[232] = "Sound/BLOW_OF_DESTRUCTION.wav";  // Destruction (ID 232)
+            map[235] = "Sound/multi_shot.wav";           // Multi-Shot (ID 235)
+            map[234] = "Sound/recover.wav";              // Recovery (ID 234)
+
+            // RAGE FIGHTER SKILLS
+            map[260] = "Sound/Ragefighter/Rage_Thrust.wav";
+            // 261 Beast Uppercut: SOUND_RAGESKILL_STAMP is played by the effect (hero: at AnimationFrame 2).
+            map[262] = "Sound/Ragefighter/Rage_Giantswing.wav";
+            map[263] = "Sound/Ragefighter/Rage_Darkside.wav";
+            map[264] = "Sound/Ragefighter/Rage_Dragonlower.wav";
+            map[265] = "Sound/Ragefighter/Rage_Dragonkick.wav";
+            map[269] = "Sound/sKnightSkill2.wav"; // Occupy
+            map[44] = "Sound/sKnightSkill2.wav";  // Crescent Moon Slash (AT_SKILL_RUSH): ReceiveMagic SOUND_SKILL_SWORD2
+
+            return map;
+        }
+    }
+}

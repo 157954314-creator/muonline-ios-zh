@@ -1,0 +1,383 @@
+using System;
+using System.IO;
+using System.Text;
+using Microsoft.Xna.Framework;
+
+namespace Client.Main
+{
+    public static class Constants
+    {
+        // Terrain
+        public const int TERRAIN_SIZE = 256;
+        public const int TERRAIN_SIZE_MASK = 255;
+        public const float TERRAIN_SCALE = 100f;
+
+        // Camera control
+        public const float MIN_CAMERA_DISTANCE = 800f;
+        public const float MAX_CAMERA_DISTANCE = 1800f;
+        public const float ZOOM_SPEED = 4f;
+
+        // Camera rotation
+        public static readonly float CAMERA_YAW = MathHelper.ToRadians(-41.99f);
+        public static readonly float CAMERA_PITCH = MathHelper.ToRadians(135.87f);
+        public const float ROTATION_SENSITIVITY = 0.003f;
+
+        // Default camera values
+        public const float DEFAULT_CAMERA_DISTANCE = 1700f;
+        public static readonly float DEFAULT_CAMERA_PITCH = MathHelper.ToRadians(135.87f);
+        public static readonly float DEFAULT_CAMERA_YAW = MathHelper.ToRadians(-41.99f);
+
+        // Rotation limits
+        public static readonly float MAX_PITCH = MathHelper.ToRadians(160);
+        public static readonly float MIN_PITCH = MathHelper.ToRadians(110);
+
+        // Player movement
+        public const float MOVE_SPEED = 300f; // 12 * 25 FPS
+
+        // UI base
+        public const float BASE_FONT_SIZE = 25f;
+        public const int BASE_UI_WIDTH = 1280;
+        public const int BASE_UI_HEIGHT = 720;
+        public const bool SHOW_NAMES_ON_HOVER = true;
+
+        // Distance thresholds
+        public const float LOW_QUALITY_DISTANCE = 3500f;
+
+        // Scene / audio
+        public static Type ENTRY_SCENE;
+        public static bool BACKGROUND_MUSIC;
+        public static bool SOUND_EFFECTS;
+        public static float BACKGROUND_MUSIC_VOLUME;
+        public static float SOUND_EFFECTS_VOLUME;
+
+        // Debug / UI flags
+        public static bool SHOW_DEBUG_PANEL;
+        public static bool DRAW_BOUNDING_BOXES;
+        public static bool DRAW_BOUNDING_BOXES_INTERACTIVES;
+        public static bool ENABLE_LOW_QUALITY_SWITCH;
+        public static bool ENABLE_LOW_QUALITY_IN_LOGIN_SCENE;
+
+        // World visuals
+        public static bool DRAW_GRASS;
+
+        // Rendering
+        /// <summary>Multisample count of the scene render target: 0 (off), 2, 4 or 8 (clamped to what the GPU supports).</summary>
+        public static int MSAA_SAMPLES;
+        public static bool MSAA_ENABLED => MSAA_SAMPLES > 0;
+        public static bool ENABLE_DYNAMIC_LIGHTS;
+        public static bool ENABLE_DYNAMIC_LIGHTING_SHADER;
+        public static bool ENABLE_GPU_SKINNING;
+        public static bool ENABLE_TERRAIN_GPU_LIGHTING;
+        public static bool OPTIMIZE_FOR_INTEGRATED_GPU;
+        public static bool DEBUG_LIGHTING_AREAS;
+        public static bool ENABLE_ITEM_MATERIAL_SHADER;
+        public static bool ENABLE_MONSTER_MATERIAL_SHADER;
+        public static bool ENABLE_WEAPON_TRAIL;
+        public static bool ENABLE_BATCH_OPTIMIZED_SORTING;
+        public static bool ENABLE_MAP_OBJECT_INSTANCING;
+        public static bool ENABLE_STATIC_MAP_RENDER_QUEUE;
+        public static bool ENABLE_STATIC_MAP_UPDATE_SKIP;
+        public static bool ENABLE_STATIC_MAP_INSTANCE_UPLOAD_CACHE;
+        public static bool ENABLE_STATIC_MAP_SHADOW_INSTANCING;
+        public static bool ENABLE_STATIC_MAP_VERTEX_LIGHTING;
+        public static bool ENABLE_DISTANCE_VERTEX_LIGHTING;
+        public static bool ENABLE_CROWD_VERTEX_LIGHTING;
+        public static float DYNAMIC_LIGHT_VERTEX_DISTANCE;
+        public static bool ENABLE_FAST_MATERIAL_SHADERS;
+        public static bool ENABLE_PARTICLE_BATCHING;
+        public static bool ENABLE_WALKER_CROWD_INSTANCING;
+        /// <summary>
+        /// Monsters with child objects (weapons, eye glows, bone effects) are crowd-instanced too; the children are
+        /// drawn by the crowd side pass (DrawQueuedCrowdInstancingSidePasses → DrawChildrenOnly).
+        /// </summary>
+        public static bool ENABLE_WALKER_CROWD_INSTANCING_WITH_CHILDREN = true;
+
+        /// <summary>
+        /// Adds plain weapons of crowd-instanced walkers to the same instanced batch as their body.
+        /// </summary>
+        public static bool ENABLE_WALKER_CROWD_CHILD_INSTANCING = true;
+
+        /// <summary>
+        /// Merges the ItemMaterial meshes of a player's body parts into one mesh (texture atlas) drawn in one or
+        /// two calls instead of one per part mesh.
+        /// </summary>
+        public static bool ENABLE_PLAYER_COMPOSITE = true;
+        public static bool ENABLE_PLAYER_EQUIPMENT_INSTANCING = true;
+        public static bool ENABLE_MERGED_PLAYER_AO = true;
+        public static bool ENABLE_SSAO_FRAME_REUSE = true;
+        public static bool ENABLE_CROWD_RENDER_LOD = true;
+        public static bool ENABLE_COVERED_ARMOR_CHROME_SKIP = true;
+        public static bool ENABLE_FUSED_BLOOM_EXTRACT = true;
+        public static bool ENABLE_DIRECT_BACKBUFFER_UI = true;
+        public static bool ENABLE_GRASS_SHADOW_CULLING = true;
+        public static bool ENABLE_REMOTE_PLAYER_SHADOW_LOD = true;
+        public static bool ENABLE_REMOTE_WING_OVERLAY_LOD = true;
+
+        /// <summary>
+        /// Draws the RGBA cutout meshes of crowd-instanced walkers as instanced batches after the DrawAfter pass.
+        /// </summary>
+        public static bool ENABLE_WALKER_CROWD_TRANSPARENT_INSTANCING = true;
+
+        /// <summary>
+        /// Draws the RGBA cutout meshes of static map objects (grass, leaves, fences) as instanced batches
+        /// at the end of each DrawAfter pass instead of one draw per mesh and object.
+        /// </summary>
+        public static bool ENABLE_STATIC_MAP_TRANSPARENT_INSTANCING = true;
+        public static bool ENABLE_STATIC_MAP_TRANSPARENT_UPLOAD_CACHE = true;
+
+        /// <summary>
+        /// Draws animated map placements (swaying plants, flags) through the multi-pose crowd batches.
+        /// </summary>
+        public static bool ENABLE_ANIMATED_MAP_CROWD_INSTANCING = true;
+        public static bool ENABLE_CROWD_SPATIAL_CULLING;
+        public static bool ENABLE_ANIMATION_THROTTLING;
+        public static bool ENABLE_SHARED_ANIMATION_PALETTES;
+        public static bool ENABLE_BMD_MESH_BATCHING;
+        public static bool ENABLE_EFFECT_POOLING;
+        public static bool ENABLE_STATIC_CHUNK_CACHING;
+        public static bool ENABLE_ITEM_MATERIAL_ANIMATION;
+        /// <summary>Login and character selection extras: glow and grading, animated water, spray and mist, fireflies, sparkles, stars.</summary>
+        public static bool ENABLE_MENU_SCENE_EFFECTS = true;
+        /// <summary>Gameplay worlds: soft glow around bright light (fire, spells, lamps) plus a light colour grade and vignette.</summary>
+        public static bool ENABLE_WORLD_BLOOM = true;
+        /// <summary>Per-map colour grade (tint, saturation, contrast, vignette) on top of the world glow.</summary>
+        public static bool ENABLE_MAP_COLOR_GRADE = true;
+        /// <summary>Ground-hugging height fog on worlds that define one.</summary>
+        public static bool ENABLE_HEIGHT_FOG = true;
+        /// <summary>Screen-space ambient occlusion (half resolution, needs the world glow pass).</summary>
+        public static bool ENABLE_SSAO;
+        /// <summary>SSAO amount, 1 = default (0..2).</summary>
+        public static float SSAO_STRENGTH = 1f;
+        /// <summary>Rim light on characters and monsters (0 = off).</summary>
+        public static float RIM_LIGHT_STRENGTH = 0.5f;
+        /// <summary>Use remastered world textures bundled with the client (Assets/Remaster) instead of the Data files.</summary>
+        public static bool REMASTERED_TEXTURES = true;
+        /// <summary>Terrain textures are sampled twice (rotated, through a noise mask) to hide their repeating grid.</summary>
+        public static bool TERRAIN_ANTI_TILING = true;
+        /// <summary>Walkers carry the rest of a frame's step on to the next path tile (no stop at every tile).</summary>
+        public static bool CONTINUOUS_PATH_WALK = true;
+        /// <summary>Walkers cut the corners of their tile path instead of zigzagging from tile centre to tile centre.</summary>
+        public static bool SMOOTH_PATH_CORNERS = true;
+        /// <summary>The camera follows the hero's height smoothly instead of every terrain step.</summary>
+        public static bool SMOOTH_CAMERA_HEIGHT = true;
+
+        /// <summary>Opening the inventory in a safe zone moves the camera in on the hero (off by default).</summary>
+        public static bool INVENTORY_CAMERA_SHOWCASE = false;
+        /// <summary>
+        /// Game worlds fade into the world's clear colour between <see cref="DISTANCE_FOG_START"/> and
+        /// <see cref="DISTANCE_FOG_END"/> (distance from the camera) and nothing is rendered beyond the end.
+        /// </summary>
+        public static bool DISTANCE_FOG_ENABLED = true;
+        public static float DISTANCE_FOG_START = 2600f;
+        public static float DISTANCE_FOG_END = 3400f;
+        public static bool ENABLE_DYNAMIC_BUFFER_POOL;
+        /// <summary>Opaque per-mesh draws of player/NPC parts are submitted grouped by effect (fewer shader switches).</summary>
+        public static bool ENABLE_DEFERRED_ACTOR_MESH_DRAWS;
+        public static int RENDER_METRICS_LEVEL;
+        public static float RENDER_SCALE;
+        public static bool HIGH_QUALITY_TEXTURES;
+        public static bool DISABLE_VSYNC;
+        public static bool UNLIMITED_FPS;
+
+        // Lighting
+        public static bool SUN_ENABLED = true;
+        public static Vector3 SUN_DIRECTION = new Vector3(-1f, 0f, -1f);
+        public static float SUN_STRENGTH = 0.35f;
+        public static float SUN_SHADOW_STRENGTH = 0.6f;
+        public static short[] SUN_WORLD_INDICES = new short[] { 0, 2, 7, 1, 3 };
+        public static bool ENABLE_SHADOW_MAPPING;
+        public static int SHADOW_MAP_SIZE;
+        public static float SHADOW_DISTANCE;
+        public static int DYNAMIC_LIGHT_UPDATE_FPS;
+        public static int ANIMATION_UPDATE_FPS;
+
+        public const int MIN_PERFORMANCE_FPS_CAP = 10;
+        public const int MAX_PERFORMANCE_FPS_CAP = 120;
+        public const int DEFAULT_DYNAMIC_LIGHT_UPDATE_FPS = 23;
+        public const int DEFAULT_ANIMATION_UPDATE_FPS = 45;
+
+        // Day-Night Cycle (real-time sun movement)
+        public static bool ENABLE_DAY_NIGHT_CYCLE;
+        public static float DAY_NIGHT_SPEED_MULTIPLIER = 1f; // 1 = real-time, 60 = 1 game day per real minute
+        public static float SHADOW_NEAR_PLANE;
+        public static float SHADOW_FAR_PLANE;
+        public static float SHADOW_BIAS;
+        public static float SHADOW_NORMAL_BIAS;
+        public static int SHADOW_UPDATE_INTERVAL; // Frames between shadow map updates (1 = every frame)
+        public static int SHADOW_MAX_CASTERS; // Max objects to render as shadow casters per frame
+        public static bool SHADOW_SKIP_SMALL_PARTS; // Skip weapons/gloves/boots for shadow casting
+
+        // Shadow quality presets
+        public enum ShadowQuality
+        {
+            Off,
+            Low,
+            Medium,
+            High,
+            Ultra
+        }
+
+        public static void ApplyShadowQualityPreset(ShadowQuality quality)
+        {
+            switch (quality)
+            {
+                case ShadowQuality.Off:
+                    ENABLE_SHADOW_MAPPING = false;
+                    break;
+
+                case ShadowQuality.Low:
+                    ENABLE_SHADOW_MAPPING = true;
+                    SHADOW_MAP_SIZE = 512;
+                    SHADOW_DISTANCE = 1500f;
+                    SHADOW_UPDATE_INTERVAL = 4;
+                    SHADOW_MAX_CASTERS = 10;
+                    SHADOW_SKIP_SMALL_PARTS = false;
+                    break;
+
+                case ShadowQuality.Medium:
+                    ENABLE_SHADOW_MAPPING = true;
+                    SHADOW_MAP_SIZE = 1024;
+                    SHADOW_DISTANCE = 2000f;
+                    SHADOW_UPDATE_INTERVAL = 3;
+                    SHADOW_MAX_CASTERS = 15;
+                    SHADOW_SKIP_SMALL_PARTS = false;
+                    break;
+
+                case ShadowQuality.High:
+                    ENABLE_SHADOW_MAPPING = true;
+                    SHADOW_MAP_SIZE = 1024;
+                    SHADOW_DISTANCE = 3000f;
+                    SHADOW_UPDATE_INTERVAL = 2;
+                    SHADOW_MAX_CASTERS = 35;
+                    SHADOW_SKIP_SMALL_PARTS = false;
+                    break;
+
+                case ShadowQuality.Ultra:
+                    ENABLE_SHADOW_MAPPING = true;
+                    SHADOW_MAP_SIZE = 2048;
+                    SHADOW_DISTANCE = 4000f;
+                    SHADOW_UPDATE_INTERVAL = 1;
+                    SHADOW_MAX_CASTERS = 50;
+                    SHADOW_SKIP_SMALL_PARTS = false;
+                    break;
+            }
+        }
+
+        public static ShadowQuality GetCurrentShadowQuality()
+        {
+            if (!ENABLE_SHADOW_MAPPING)
+                return ShadowQuality.Off;
+
+            // Match current settings to closest preset
+            if (SHADOW_MAP_SIZE <= 512)
+                return ShadowQuality.Low;
+            if (SHADOW_MAP_SIZE <= 1024 && SHADOW_DISTANCE <= 2500f)
+                return ShadowQuality.Medium;
+            if (SHADOW_MAP_SIZE <= 1024)
+                return ShadowQuality.High;
+            return ShadowQuality.Ultra;
+        }
+
+        public static int ClampPerformanceFps(int fps)
+        {
+            return Math.Clamp(fps, MIN_PERFORMANCE_FPS_CAP, MAX_PERFORMANCE_FPS_CAP);
+        }
+
+        // Paths
+        public static string DataPath;
+        public static string DataPathUrl = "http://192.168.55.220/Data.zip";
+        public static string DefaultDataPathUrl = "https://full-wkr.mu.webzen.co.kr/muweb/full/MU_Red_1_20_61_Full.zip";
+        public static string SETTINGS_PATH = "appsettings.json";
+
+        public static float FOV_SCALE = 1f;
+
+        // Supported fonts: Arial, NotoKR & NotoSC
+        public static string FONT_NAME = "NotoSC";
+        public static Encoding DATA_TEXT_ENCODING = Encoding.UTF8;
+
+        static Constants()
+        {
+            ApplyBaseDefaults();
+#if DEBUG
+            ApplyDebugDefaults();
+#endif
+        }
+
+        private static void ApplyBaseDefaults()
+        {
+            ENTRY_SCENE = typeof(Scenes.LoadScene);
+
+            BACKGROUND_MUSIC = true;
+            SOUND_EFFECTS = true;
+            BACKGROUND_MUSIC_VOLUME = 50f;
+            SOUND_EFFECTS_VOLUME = 100f;
+
+            SHOW_DEBUG_PANEL = false;
+            DRAW_BOUNDING_BOXES = false;
+            DRAW_BOUNDING_BOXES_INTERACTIVES = false;
+            DRAW_GRASS = true;
+            ENABLE_LOW_QUALITY_SWITCH = true;
+            ENABLE_LOW_QUALITY_IN_LOGIN_SCENE = false;
+
+            MSAA_SAMPLES = 0;
+            ENABLE_DYNAMIC_LIGHTS = true;
+            ENABLE_DYNAMIC_LIGHTING_SHADER = true;
+            ENABLE_GPU_SKINNING = true;
+            ENABLE_TERRAIN_GPU_LIGHTING = true;
+            OPTIMIZE_FOR_INTEGRATED_GPU = false;
+            DEBUG_LIGHTING_AREAS = false;
+            ENABLE_ITEM_MATERIAL_SHADER = true;
+            ENABLE_MONSTER_MATERIAL_SHADER = true;
+            ENABLE_WEAPON_TRAIL = true;
+            ENABLE_BATCH_OPTIMIZED_SORTING = true;
+            ENABLE_MAP_OBJECT_INSTANCING = true;
+            ENABLE_STATIC_MAP_RENDER_QUEUE = true;
+            ENABLE_STATIC_MAP_UPDATE_SKIP = true;
+            ENABLE_STATIC_MAP_INSTANCE_UPLOAD_CACHE = true;
+            ENABLE_STATIC_MAP_SHADOW_INSTANCING = true;
+            ENABLE_STATIC_MAP_VERTEX_LIGHTING = true;
+            ENABLE_DISTANCE_VERTEX_LIGHTING = true;
+            ENABLE_CROWD_VERTEX_LIGHTING = true;
+            DYNAMIC_LIGHT_VERTEX_DISTANCE = 1600f;
+            ENABLE_FAST_MATERIAL_SHADERS = true;
+            ENABLE_PARTICLE_BATCHING = true;
+            ENABLE_WALKER_CROWD_INSTANCING = true;
+            ENABLE_CROWD_SPATIAL_CULLING = true;
+            ENABLE_ANIMATION_THROTTLING = true;
+            ENABLE_SHARED_ANIMATION_PALETTES = true;
+            ENABLE_BMD_MESH_BATCHING = true;
+            ENABLE_EFFECT_POOLING = true;
+            ENABLE_STATIC_CHUNK_CACHING = true;
+            ENABLE_ITEM_MATERIAL_ANIMATION = true;
+            ENABLE_DYNAMIC_BUFFER_POOL = true;
+            ENABLE_DEFERRED_ACTOR_MESH_DRAWS = true;
+            RENDER_METRICS_LEVEL = 1;
+            RENDER_SCALE = 1.0f;
+            HIGH_QUALITY_TEXTURES = true;
+            // Frames in step with the screen: uncapped frames tear and arrive unevenly, which reads as stutter.
+            DISABLE_VSYNC = false;
+            UNLIMITED_FPS = false;
+            ENABLE_SHADOW_MAPPING = false;
+            ENABLE_DAY_NIGHT_CYCLE = false;
+            DAY_NIGHT_SPEED_MULTIPLIER = 60f;
+            DYNAMIC_LIGHT_UPDATE_FPS = DEFAULT_DYNAMIC_LIGHT_UPDATE_FPS;
+            ANIMATION_UPDATE_FPS = DEFAULT_ANIMATION_UPDATE_FPS;
+            // Default to the Medium preset unless user changes it in options
+            // ApplyShadowQualityPreset(ShadowQuality.Medium);
+            SHADOW_NEAR_PLANE = 10f;
+            SHADOW_FAR_PLANE = 6000f;
+            SHADOW_BIAS = 0.005f;
+            SHADOW_NORMAL_BIAS = 0.008f;
+
+            DataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
+        }
+
+#if DEBUG
+        private static void ApplyDebugDefaults()
+        {
+            DRAW_BOUNDING_BOXES = false;
+            SHOW_DEBUG_PANEL = false;
+        }
+#endif
+    }
+}

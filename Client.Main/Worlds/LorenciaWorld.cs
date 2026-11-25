@@ -1,0 +1,276 @@
+﻿using Client.Main.Configuration;
+using Client.Main.Controllers;
+using Client.Main.Controls;
+using Client.Main.Core.Utilities;
+using Client.Main.Objects.Monsters;
+using Client.Main.Objects.Worlds.Lorencia;
+using Microsoft.Xna.Framework;
+using System.Threading.Tasks;
+
+namespace Client.Main.Worlds
+{
+    [WorldInfo(0, "Lorencia")]
+    public class LorenciaWorld : WalkableWorldControl
+    {
+        // Gameplay colour grade / atmosphere (World Glow, height fog).
+        private protected override void ConfigureWorldGlow(Client.Main.Graphics.SceneBloom glow)
+        {
+            glow.Tint = new Microsoft.Xna.Framework.Vector3(1.000f, 0.900f, 0.750f);
+            glow.Saturation = 1.08f;
+            glow.Contrast = 1.05f;
+            glow.Lift = new Microsoft.Xna.Framework.Vector3(0.020f, 0.012f, 0.000f);
+            glow.Vignette = 0.22f;
+        }
+
+        public override Client.Main.Graphics.HeightFogPreset HeightFog { get; } =
+            new(new Microsoft.Xna.Framework.Vector3(0.550f, 0.500f, 0.420f), 0.3f);
+
+        private BirdManager _birdManager;
+        private LorenciaLeafAmbientEffect _leafEffect;
+        private const string RainSoundPath = "Sound/aRain.wav";
+        public bool IsRaining { get; set; }
+
+        // Flag to track if the player is already in the pub area
+        private bool isInPubArea = false;
+        private string pubMusicPath = "Music/Pub.mp3";
+
+        public LorenciaWorld() : base(worldIndex: 1)
+        {
+            BackgroundMusicPath = "Music/main_theme.mp3";
+            AmbientSoundPath = "Sound/aWind.wav"; // Wind ambient for open spaces
+            Name = "Lorencia";
+            // SourceMain5.2 lights the map with the terrain light map only (no extra ambient): darker, like the original.
+            Terrain.AmbientLight = 0f;
+        }
+
+        public override void AfterLoad()
+        {
+            Vector2 defaultSpawn = new Vector2(138, 124);
+
+            Walker.Reset();
+
+            bool shouldUseDefaultSpawn = false;
+            if (MuGame.Network == null ||
+                MuGame.Network.CurrentState == Core.Client.ClientConnectionState.Initial ||
+                MuGame.Network.CurrentState == Core.Client.ClientConnectionState.Disconnected)
+            {
+                shouldUseDefaultSpawn = true;
+            }
+            else if (Walker.Location == Vector2.Zero)
+            {
+                shouldUseDefaultSpawn = true;
+            }
+
+            if (shouldUseDefaultSpawn)
+            {
+                Walker.Location = defaultSpawn;
+            }
+
+            Walker.MoveTargetPosition = Walker.TargetPosition;
+            Walker.Position = Walker.TargetPosition;
+
+            Terrain.WaterSpeed = 0.05f;
+            Terrain.DistortionAmplitude = 0.2f;
+            Terrain.DistortionFrequency = 1.0f;
+
+            Terrain.ConfigureGrass();
+
+            SoundController.Instance.PreloadBackgroundMusic(pubMusicPath);
+
+            // Initialize bird system for outdoor areas
+            _birdManager = new BirdManager(this);
+
+            base.AfterLoad();
+        }
+
+        protected override void CreateMapTileObjects()
+        {
+            base.CreateMapTileObjects();
+
+            for (var i = 0; i < 13; i++)
+                MapTileObjects[i] = typeof(TreeObject);
+
+            for (var i = 0; i < 8; i++)
+                MapTileObjects[20 + i] = typeof(GrassObject);
+
+            for (var i = 0; i < 5; i++)
+                MapTileObjects[30 + i] = typeof(StoneObject);
+
+            for (var i = 0; i < 3; i++)
+                MapTileObjects[40 + i] = typeof(StoneStatueObject);
+
+            MapTileObjects[43] = typeof(SteelStatueObject);
+
+            for (var i = 0; i < 3; i++)
+                MapTileObjects[44 + i] = typeof(TombObject);
+
+            for (var i = 0; i < 2; i++)
+                MapTileObjects[50 + i] = typeof(FireLightObject);
+
+            MapTileObjects[52] = typeof(BonfireObject);
+            MapTileObjects[55] = typeof(DungeonGateObject);
+
+            for (var i = 0; i < 2; i++)
+                MapTileObjects[56 + i] = typeof(MerchantAnimalObject);
+
+            MapTileObjects[58] = typeof(TreasureDrumObject);
+            MapTileObjects[59] = typeof(TreasureChestObject);
+            MapTileObjects[60] = typeof(ShipObject);
+
+            for (var i = 0; i < 3; i++)
+                MapTileObjects[65 + i] = typeof(SteelWallObject);
+
+            MapTileObjects[68] = typeof(SteelDoorObject);
+
+            for (var i = 0; i < 6; i++)
+                MapTileObjects[69 + i] = typeof(StoneWallObject);
+
+            for (var i = 0; i < 4; i++)
+                MapTileObjects[75 + i] = typeof(MuWallObject);
+
+            MapTileObjects[80] = typeof(BridgeObject);
+
+            for (var i = 0; i < 4; i++)
+                MapTileObjects[81 + i] = typeof(FenceObject);
+
+            MapTileObjects[85] = typeof(BridgeStoneObject);
+
+            MapTileObjects[90] = typeof(StreetLightObject);
+
+            for (var i = 0; i < 3; i++)
+                MapTileObjects[91 + i] = typeof(CannonObject);
+
+            MapTileObjects[95] = typeof(CurtainObject);
+
+            for (var i = 0; i < 2; i++)
+                MapTileObjects[96 + i] = typeof(SignObject);
+
+            for (var i = 0; i < 4; i++)
+                MapTileObjects[98 + i] = typeof(CarriageObject);
+
+            for (var i = 0; i < 2; i++)
+                MapTileObjects[102 + i] = typeof(StrawObject);
+
+            MapTileObjects[105] = typeof(WaterSpoutObject);
+
+            for (var i = 0; i < 4; i++)
+                MapTileObjects[106 + i] = typeof(WellObject);
+
+            MapTileObjects[110] = typeof(HangingObject);
+            MapTileObjects[111] = typeof(StairObject);
+
+            for (var i = 0; i < 5; i++)
+                MapTileObjects[115 + i] = typeof(HouseObject);
+
+            MapTileObjects[120] = typeof(TentObject);
+
+            for (var i = 0; i < 6; i++)
+                MapTileObjects[121 + i] = typeof(HouseWallObject);
+
+            for (var i = 0; i < 3; i++)
+                MapTileObjects[127 + i] = typeof(HouseEtcObject);
+
+            for (var i = 0; i < 3; i++)
+                MapTileObjects[130 + i] = typeof(LightObject);
+
+            MapTileObjects[133] = typeof(RestPlaceObject);
+
+            for (var i = 0; i < 7; i++)
+                MapTileObjects[140 + i] = typeof(FurnitureObject);
+
+            MapTileObjects[150] = typeof(CandleObject);
+
+            for (var i = 0; i < 3; i++)
+                MapTileObjects[151 + i] = typeof(BeerObject);
+        }
+
+        /// <summary>Diagnostics (StressHarness).</summary>
+        internal BirdManager BirdsForDiagnostics => _birdManager;
+
+        public override void Update(GameTime time)
+        {
+            if (World is not WalkableWorldControl walkableWorld)
+                return;
+
+            base.Update(time);
+
+            // Update bird system
+            _birdManager?.Update(time);
+
+            // A world being replaced (map change) leaves the audio to the new one.
+            if (AudioSuppressed)
+                return;
+
+            if (IsRaining && walkableWorld.HeroTile != 4 && Walker != null)
+                SoundController.Instance.PlayBufferWithAttenuation(RainSoundPath, Walker.Position, Walker.Position, loop: true);
+            else
+                SoundController.Instance.StopManagedLoop(RainSoundPath);
+
+            if (walkableWorld.HeroTile == 4)
+            {
+                // If player enters the pub area and wasn't there before
+                if (!isInPubArea)
+                {
+                    isInPubArea = true;
+                    SoundController.Instance.StopAmbientSound();
+                    // Stop the current background music and play the pub music
+                    SoundController.Instance.StopBackgroundMusic();
+                    SoundController.Instance.PlayBackgroundMusic(pubMusicPath);
+                }
+            }
+            else
+            {
+                // If player leaves the pub area and was previously inside
+                if (isInPubArea)
+                {
+                    isInPubArea = false;
+                    SoundController.Instance.PlayAmbientSound(AmbientSoundPath);
+                    // Stop the pub music and resume the default background music
+                    SoundController.Instance.StopBackgroundMusic();
+                    SoundController.Instance.PlayBackgroundMusic(BackgroundMusicPath);
+                }
+            }
+        }
+
+        public override async Task Load()
+        {
+            var leafSettings = MuGame.AppSettings?.Environment?.LorenciaLeaf;
+            if (leafSettings?.Enabled != false)
+            {
+                _leafEffect = new LorenciaLeafAmbientEffect(this, leafSettings ?? new LorenciaLeafEffectSettings());
+                Objects.Add(_leafEffect);
+            }
+
+            await base.Load();
+
+            // Objects.Add(new Spider() { Location = new Vector2(181, 127), Direction = Models.Direction.South });
+            // Objects.Add(new BudgeDragon() { Location = new Vector2(182, 127), Direction = Models.Direction.South });
+            // Objects.Add(new BullFighter() { Location = new Vector2(183, 127), Direction = Models.Direction.South });
+            // Objects.Add(new DarkKnight() { Location = new Vector2(184, 127), Direction = Models.Direction.South });
+            // Objects.Add(new Ghost() { Location = new Vector2(185, 127), Direction = Models.Direction.South });
+            // Objects.Add(new HellSpider() { Location = new Vector2(186, 127), Direction = Models.Direction.South });
+            // Objects.Add(new Hound() { Location = new Vector2(187, 127), Direction = Models.Direction.South });
+            // Objects.Add(new Larva() { Location = new Vector2(188, 127), Direction = Models.Direction.South });
+            // Objects.Add(new Giant() { Location = new Vector2(189, 127), Direction = Models.Direction.South });
+            // Objects.Add(new Lich() { Location = new Vector2(190, 127), Direction = Models.Direction.South });
+
+        }
+
+        public override void Dispose()
+        {
+            SoundController.Instance.StopManagedLoop(RainSoundPath);
+            // Clean up birds before disposing world
+            _birdManager?.Clear();
+            _birdManager = null;
+
+            if (_leafEffect != null)
+            {
+                Objects.Remove(_leafEffect);
+                _leafEffect.Dispose();
+                _leafEffect = null;
+            }
+
+            base.Dispose();
+        }
+    }
+}
