@@ -104,7 +104,9 @@ jobs:
           $verCode = [int]"${{ github.run_number }}"
           if ($verCode -lt 2) { $verCode = 2 }
           $verName = "1.0.$verCode"
-          Write-Host "Building Android APK version $verName (code $verCode) with fixed signing keystore"
+          $keystorePath = (Resolve-Path "MuAndroid/Signing/mumono-dev.p12").Path
+          Write-Host "Building Android APK version $verName (code $verCode) with keystore: $keystorePath"
+          keytool -list -keystore $keystorePath -storetype PKCS12 -storepass mumono123
           dotnet restore MuAndroid/MuAndroid.csproj `
             -r android-arm64 `
             --disable-parallel `
@@ -123,7 +125,7 @@ jobs:
             -p:ApplicationVersion=$verCode `
             -p:ApplicationDisplayVersion=$verName `
             -p:AndroidKeyStore=true `
-            -p:AndroidSigningKeyStore=Signing/mumono-dev.p12 `
+            -p:AndroidSigningKeyStore=$keystorePath `
             -p:AndroidSigningKeyAlias=mumono `
             -p:AndroidSigningKeyPass=mumono123 `
             -p:AndroidSigningStorePass=mumono123 `
