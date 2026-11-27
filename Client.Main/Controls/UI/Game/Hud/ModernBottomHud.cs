@@ -1021,12 +1021,12 @@ namespace Client.Main.Controls.UI.Game.Hud
             if (count == 0)
                 return;
 
-            int barHeight = 15;
-            int barGap = 6;
-            int barWidth = Math.Clamp((int)(_panelRect.Width * 0.12f), 120, 156);
+            int barHeight = 18;
+            int barGap = 8;
+            int barWidth = Math.Clamp((int)(_panelRect.Width * 0.13f), 134, 170);
             int totalWidth = (count * barWidth) + ((count - 1) * barGap);
             int startX = _panelRect.Center.X - (totalWidth / 2);
-            int y = _panelRect.Y - barHeight - 34; // above the bar's top ornaments
+            int y = _panelRect.Y - barHeight - 32; // cleanly seated above bottom bar ornaments
             int drawn = 0;
 
             for (int i = 0; i < _companionInfos.Length; i++)
@@ -1042,38 +1042,44 @@ namespace Client.Main.Controls.UI.Game.Hud
 
         private void DrawCompanionLifeBar(SpriteBatch sb, Texture2D pixel, Rectangle rect, CompanionLifeInfo info)
         {
-            sb.Draw(pixel, rect, ModernHudTheme.BorderOuter);
+            // Soft shadow + dark outer rim
+            sb.Draw(pixel, new Rectangle(rect.X + 1, rect.Y + 2, rect.Width, rect.Height), Color.Black * 0.45f);
+            sb.Draw(pixel, rect, new Color(7, 8, 12, 248));
 
             var track = new Rectangle(rect.X + 1, rect.Y + 1, Math.Max(1, rect.Width - 2), Math.Max(1, rect.Height - 2));
             UiDrawHelper.DrawVerticalGradient(sb, track,
-                new Color(18, 20, 28, 242),
+                new Color(18, 22, 30, 244),
                 new Color(8, 10, 14, 252));
 
             float lifeRatio = info.Maximum > 0
                 ? MathHelper.Clamp(info.Current / (float)info.Maximum, 0f, 1f)
                 : 0f;
-            int fillWidth = (int)(track.Width * lifeRatio);
+            int fillWidth = (int)MathF.Round((track.Width - 2) * lifeRatio);
             if (fillWidth > 0)
             {
-                var fillRect = new Rectangle(track.X, track.Y, fillWidth, track.Height);
-                UiDrawHelper.DrawHorizontalGradient(sb, fillRect,
-                    Color.Lerp(info.FillColor * 0.55f, ModernHudTheme.BgDark, 0.45f),
-                    info.FillColor);
-                sb.Draw(pixel, new Rectangle(fillRect.X, fillRect.Y, fillRect.Width, 1), info.FillColor * 0.65f);
+                var fillRect = new Rectangle(track.X + 1, track.Y + 1, fillWidth, Math.Max(1, track.Height - 2));
+                Color bright = Color.Lerp(info.FillColor, Color.White, 0.16f);
+                Color deep = Color.Lerp(info.FillColor, new Color(10, 16, 12), 0.48f);
+                UiDrawHelper.DrawVerticalGradient(sb, fillRect, bright, deep, 4);
+                sb.Draw(pixel, new Rectangle(fillRect.X, fillRect.Y, fillRect.Width, 1), Color.White * 0.28f);
             }
 
-            string text = $"{info.Name} {info.Current}/{info.Maximum}";
-            float scale = 0.34f;
-            Vector2 size = _font!.MeasureString(text) * scale;
-            float opticalY = Localization.Loc.IsChinese ? -size.Y * 0.10f : 0f;
-            Vector2 textPos = new(
-                rect.X + (rect.Width - size.X) * 0.5f,
-                rect.Y + (rect.Height - size.Y) * 0.5f + opticalY);
+            // Delicate antique-gold bevel frame
+            Color goldRim = new Color(164, 130, 68, 185);
+            UiDrawHelper.DrawBorder(sb, track, goldRim);
 
-            sb.DrawString(_font, text, textPos + Vector2.One,
-                Color.Black * 0.8f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
-            sb.DrawString(_font, text, textPos,
-                ModernHudTheme.TextWhite, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            string text = $"{info.Name} {info.Current}/{info.Maximum}";
+            var crispFont = GraphicsManager.GetUiFont(10.5f, out float scale) ?? _font!;
+            Vector2 size = crispFont.MeasureString(text) * scale;
+            float opticalY = Localization.Loc.IsChinese ? -size.Y * 0.09f : 0f;
+            Vector2 textPos = UiScaler.SnapToPixel(new Vector2(
+                rect.X + (rect.Width - size.X) * 0.5f,
+                rect.Y + (rect.Height - size.Y) * 0.5f + opticalY));
+
+            sb.DrawString(crispFont, text, textPos + Vector2.One,
+                Color.Black * 0.88f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            sb.DrawString(crispFont, text, textPos,
+                new Color(246, 244, 236), 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
         // ════════════════════════════ Drawing ════════════════════════════

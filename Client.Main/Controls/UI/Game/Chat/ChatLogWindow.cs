@@ -414,18 +414,24 @@ namespace Client.Main.Controls.UI
             }
 
             var spriteBatch = GraphicsManager.Instance.Sprite;
+            var pixel = GraphicsManager.Instance.Pixel;
             var currentMsgList = _messages[_currentViewType];
             int totalLinesInView = currentMsgList.Count;
 
+            const int padX = 8;
+            const int padY = 5;
             float startY = DisplayRectangle.Y + WND_TOP_BOTTOM_EDGE;
-            float startX = DisplayRectangle.X + WND_LEFT_RIGHT_EDGE;
-            float clientWidth = CalculateClientWidth();
+            float startX = DisplayRectangle.X + WND_LEFT_RIGHT_EDGE + padX;
+            float clientWidth = Math.Max(20f, CalculateClientWidth() - padX);
 
-            // 1. Draw background (only when frame is visible)
-            if (_showFrame)
+            // 1. Draw unified refined backdrop
+            if (_showFrame && pixel != null)
             {
-                Color bg = new Color(0, 0, 0) * _backgroundAlpha;
-                spriteBatch.Draw(GraphicsManager.Instance.Pixel, DisplayRectangle, bg);
+                var frameRect = DisplayRectangle;
+                UiDrawHelper.DrawVerticalGradient(spriteBatch, frameRect,
+                    new Color(12, 15, 22, 208), new Color(8, 10, 15, 226), 6);
+                UiDrawHelper.DrawBorder(spriteBatch, frameRect, new Color(156, 126, 70, 125));
+                spriteBatch.Draw(pixel, new Rectangle(frameRect.X, frameRect.Y, 2, frameRect.Height), new Color(198, 160, 88, 185));
             }
 
             // 2. Draw messages
@@ -440,37 +446,62 @@ namespace Client.Main.Controls.UI
                 if (drawCount < _showingLines)
                     y += (_showingLines - drawCount) * _lineHeight;
 
+                // When frame is hidden, draw one clean unified obsidian card behind the active lines
+                if (!_showFrame && pixel != null && drawCount > 0)
+                {
+                    float maxLineW = 0f;
+                    for (int i = first; i <= last; i++)
+                    {
+                        var m = currentMsgList[i];
+                        var f = m.Type == MessageType.GM ? _fontBold : _font;
+                        float w = f.MeasureString(m.DisplayText).X * _fontScale;
+                        if (w > maxLineW) maxLineW = w;
+                    }
+                    int boxW = Math.Min(DisplayRectangle.Width, (int)MathF.Ceiling(maxLineW) + padX * 2 + 6);
+                    int boxH = (int)MathF.Ceiling(drawCount * _lineHeight) + padY * 2;
+                    var boxRect = new Rectangle(DisplayRectangle.X + 2, (int)MathF.Floor(y) - padY, Math.Max(40, boxW), boxH);
+
+                    UiDrawHelper.DrawVerticalGradient(spriteBatch, boxRect,
+                        new Color(10, 13, 20, 168), new Color(7, 9, 14, 196), 6);
+                    // Subtle antique-gold left accent + soft dark-gold hairline border
+                    UiDrawHelper.DrawBorder(spriteBatch, boxRect, new Color(152, 124, 72, 72));
+                    spriteBatch.Draw(pixel, new Rectangle(boxRect.X, boxRect.Y + 2, 2, Math.Max(1, boxRect.Height - 4)), new Color(204, 166, 92, 165));
+                }
+
                 for (int i = first; i <= last; i++)
                 {
                     var msg = currentMsgList[i];
                     var font = msg.Type == MessageType.GM ? _fontBold : _font;
                     var text = msg.DisplayText;
-                    var textPos = new Vector2(startX, y);
+                    var textPos = UiScaler.SnapToPixel(new Vector2(startX, y));
                     var txtCol = GetMessageColor(msg.Type);
-                    var bgCol = GetMessageBackgroundColor(msg.Type, _showFrame);
 
-                    // Draw message background if any
-                    if (bgCol.A > 0)
+                    // Colored pill only for special channels (Party / Guild / Whisper / Union)
+                    if (msg.Type is MessageType.Whisper or MessageType.Party or MessageType.Guild or MessageType.Union or MessageType.Gens)
                     {
-                        // MeasureString can be slow, consider caching or estimating
-                        float textWidth = font.MeasureString(text).X * _fontScale;
-                        float bgWidth = Math.Min(clientWidth, textWidth);
-                        spriteBatch.Draw(GraphicsManager.Instance.Pixel,
-                                new Rectangle((int)textPos.X, (int)textPos.Y, (int)bgWidth, (int)_lineHeight),
+                        var bgCol = GetMessageBackgroundColor(msg.Type, _showFrame);
+                        if (bgCol.A > 0 && pixel != null)
+                        {
+                            float textWidth = font.MeasureString(text).X * _fontScale;
+                            float bgWidth = Math.Min(clientWidth, textWidth + 6);
+                            spriteBatch.Draw(pixel,
+                                new Rectangle((int)textPos.X - 3, (int)textPos.Y, (int)bgWidth, (int)_lineHeight),
                                 bgCol);
+                        }
                     }
 
                     // Hover effect (only when frame is visible)
-                    if (_showFrame && i == _hoveredMessageGlobalIndex)
+                    if (_showFrame && i == _hoveredMessageGlobalIndex && pixel != null)
                     {
                         var hoverRect = new Rectangle(
-                            (int)startX, (int)y,
-                            (int)clientWidth, (int)_lineHeight);
-                        spriteBatch.Draw(GraphicsManager.Instance.Pixel, hoverRect, new Color(30, 30, 30, 180));
-                        txtCol = new Color(255, 128, 255);
+                            (int)startX - 4, (int)y,
+                            (int)clientWidth + 4, (int)_lineHeight);
+                        spriteBatch.Draw(pixel, hoverRect, new Color(46, 38, 24, 165));
+                        txtCol = new Color(255, 224, 142);
                     }
 
-                    // Draw text
+                    // Crisp 1px shadow + foreground text
+                    spriteBatch.DrawString(font, text, textPos + Vector2.One, Color.Black * 0.85f, 0f, Vector2.Zero, _fontScale, SpriteEffects.None, 0f);
                     spriteBatch.DrawString(font, text, textPos, txtCol, 0f, Vector2.Zero, _fontScale, SpriteEffects.None, 0f);
 
                     y += _lineHeight;
@@ -792,9 +823,9 @@ namespace Client.Main.Controls.UI
             switch (type)
             {
                 case MessageType.Whisper: return Color.Black;
-                case MessageType.System: return new Color(100, 150, 255);
-                case MessageType.Error: return new Color(255, 30, 0);
-                case MessageType.Chat: return new Color(205, 220, 239);
+                case MessageType.System: return new Color(152, 208, 255);
+                case MessageType.Error: return new Color(255, 92, 82);
+                case MessageType.Chat: return new Color(230, 236, 245);
                 case MessageType.Party: return Color.Black;
                 case MessageType.Guild: return Color.Black;
                 case MessageType.Union: return Color.Black;

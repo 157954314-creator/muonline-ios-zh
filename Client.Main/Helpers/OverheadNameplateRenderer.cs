@@ -1,4 +1,5 @@
 using Client.Main.Controllers;
+using Client.Main.Controls.UI.Common;
 using Client.Main.Graphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -361,11 +362,18 @@ namespace Client.Main.Helpers
                 SpriteEffects.None, 0f);
         }
 
-        private static readonly Color S6BannerBg = new(100, 0, 0, 220);
-        private static readonly Color S6BannerText = new(255, 230, 200, 255);
-        private static readonly Color S6BarBack = new(51, 0, 0, 255);       // 0xFF330000
-        private static readonly Color S6BarTrack = new(50, 10, 0, 255);     // 0xFF320A00
-        private static readonly Color S6BarFill = new(250, 10, 0, 255);     // 0xFFFA0A00
+        private static readonly Color S6BannerTop = new(44, 15, 19, 232);
+        private static readonly Color S6BannerBottom = new(18, 7, 10, 240);
+        private static readonly Color S6BannerBorderOuter = new(8, 6, 8, 248);
+        private static readonly Color S6BannerBorderGold = new(176, 138, 72, 195);
+        private static readonly Color S6BannerGoldSheen = new(238, 206, 132, 135);
+        private static readonly Color S6BannerText = new(255, 240, 212, 255);
+        private static readonly Color S6BarBack = new(10, 8, 12, 248);
+        private static readonly Color S6BarBorderGold = new(142, 110, 58, 185);
+        private static readonly Color S6BarTrack = new(26, 10, 12, 240);
+        private static readonly Color S6BarFillTop = new(242, 62, 48, 255);
+        private static readonly Color S6BarFillBottom = new(156, 18, 18, 255);
+        private static readonly Color S6BarGloss = new(255, 175, 155, 110);
 
         private static void DrawS6SegmentedBar(SpriteBatch sb, Texture2D pixel, int centerX, int topY, float health, int steps, int totalWidth, int barHeight)
         {
@@ -374,19 +382,31 @@ namespace Client.Main.Helpers
             int innerW = Math.Max(4, totalWidth - border * 2);
             int innerH = Math.Max(2, barHeight - border * 2);
 
-            // Drop shadow + dark crimson backing + inner track
-            sb.Draw(pixel, new Rectangle(x + 1, topY + 1, totalWidth, barHeight), Color.Black * 0.55f);
+            // Soft drop shadow + dark metallic frame + subtle gold bevel
+            sb.Draw(pixel, new Rectangle(x + 1, topY + 2, totalWidth, barHeight), Color.Black * 0.55f);
             sb.Draw(pixel, new Rectangle(x, topY, totalWidth, barHeight), S6BarBack);
             sb.Draw(pixel, new Rectangle(x + border, topY + border, innerW, innerH), S6BarTrack);
+            DrawBorder(sb, pixel, new Rectangle(x, topY, totalWidth, barHeight), S6BarBorderGold, 0f);
 
             float clamped = Math.Clamp(health, 0f, 1f);
-            int filledSteps = clamped <= 0f ? 0 : Math.Max(1, (int)MathF.Ceiling(clamped * steps));
-            float stepW = innerW / (float)steps;
-            for (int k = 0; k < filledSteps; k++)
+            int fillW = clamped <= 0f ? 0 : Math.Max(2, (int)MathF.Round(innerW * clamped));
+            if (fillW > 0)
             {
-                int sx = x + border + (int)MathF.Floor(k * stepW);
-                int sw = Math.Max(1, (int)MathF.Floor((k + 1) * stepW) - (int)MathF.Floor(k * stepW) - 1);
-                sb.Draw(pixel, new Rectangle(sx, topY + border, sw, innerH), S6BarFill);
+                var fillRect = new Rectangle(x + border, topY + border, fillW, innerH);
+                UiDrawHelper.DrawVerticalGradient(sb, fillRect, S6BarFillTop, S6BarFillBottom, 4);
+                sb.Draw(pixel, new Rectangle(fillRect.X, fillRect.Y, fillRect.Width, 1), S6BarGloss);
+
+                // Subtle classic MU segment dividers (non-blocky)
+                if (steps > 1 && innerW >= steps * 3)
+                {
+                    float stepW = innerW / (float)steps;
+                    for (int k = 1; k < steps; k++)
+                    {
+                        int tx = x + border + (int)MathF.Round(k * stepW);
+                        if (tx < fillRect.Right)
+                            sb.Draw(pixel, new Rectangle(tx, fillRect.Y, 1, innerH), Color.Black * 0.24f);
+                    }
+                }
             }
         }
 
@@ -402,8 +422,8 @@ namespace Client.Main.Helpers
             if (cx < -60 || cx > viewport.Width + 60 || topY < -20 || topY > viewport.Height + 20)
                 return;
 
-            int barW = Math.Clamp((int)MathF.Round(56f * MathF.Max(renderScale, 0.7f)), 42, 72);
-            int barH = Math.Clamp((int)MathF.Round(5f * MathF.Max(renderScale, 0.7f)), 4, 7);
+            int barW = Math.Clamp((int)MathF.Round(58f * MathF.Max(renderScale, 0.7f)), 44, 74);
+            int barH = Math.Clamp((int)MathF.Round(6f * MathF.Max(renderScale, 0.7f)), 5, 8);
             DrawS6SegmentedBar(sb, pixel, cx, topY, health, steps: 8, barW, barH);
         }
 
@@ -422,22 +442,41 @@ namespace Client.Main.Helpers
             Vector2 size = font.MeasureString(name) * fontScale;
             int cx = viewport.Width / 2;
             int topY = (int)MathF.Round(8f * scale);
-            int padX = Math.Max(8, (int)MathF.Round(10f * scale));
-            int padY = Math.Max(2, (int)MathF.Round(3f * scale));
-            int bgW = Math.Max((int)MathF.Ceiling(size.X) + padX * 2, (int)MathF.Round(128f * scale));
-            int bgH = (int)MathF.Ceiling(size.Y) + padY * 2;
-            var bgRect = new Rectangle(cx - bgW / 2, topY, bgW, bgH);
+            int padX = Math.Max(14, (int)MathF.Round(18f * scale));
+            int padY = Math.Max(4, (int)MathF.Round(5f * scale));
+            int barH = Math.Max(7, (int)MathF.Round(8f * scale));
+            int barGap = Math.Max(4, (int)MathF.Round(5f * scale));
+            int cardW = Math.Max((int)MathF.Ceiling(size.X) + padX * 2, (int)MathF.Round(176f * scale));
+            int cardH = (int)MathF.Ceiling(size.Y) + padY * 2 + barGap + barH + Math.Max(4, (int)MathF.Round(5f * scale));
+            var cardRect = new Rectangle(cx - cardW / 2, topY, cardW, cardH);
 
-            sb.Draw(pixel, bgRect, S6BannerBg);
-            DrawBorder(sb, pixel, bgRect, new Color(45, 0, 0, 240), 0f);
+            // Soft drop shadow + dark outer rim
+            sb.Draw(pixel, new Rectangle(cardRect.X + 2, cardRect.Y + 3, cardRect.Width, cardRect.Height), Color.Black * 0.45f);
+            sb.Draw(pixel, cardRect, S6BannerBorderOuter);
+
+            // Rich deep crimson-obsidian gradient body
+            var innerRect = new Rectangle(cardRect.X + 1, cardRect.Y + 1, Math.Max(1, cardRect.Width - 2), Math.Max(1, cardRect.Height - 2));
+            UiDrawHelper.DrawVerticalGradient(sb, innerRect, S6BannerTop, S6BannerBottom, 8);
+
+            // Ornate antique-gold bevel + top sheen + corner rivets
+            DrawBorder(sb, pixel, innerRect, S6BannerBorderGold, 0f);
+            sb.Draw(pixel, new Rectangle(innerRect.X + 4, innerRect.Y + 1, Math.Max(1, innerRect.Width - 8), 1), S6BannerGoldSheen);
+            int rSz = 2;
+            sb.Draw(pixel, new Rectangle(innerRect.X + 2, innerRect.Y + 2, rSz, rSz), S6BannerGoldSheen);
+            sb.Draw(pixel, new Rectangle(innerRect.Right - 2 - rSz, innerRect.Y + 2, rSz, rSz), S6BannerGoldSheen);
+            sb.Draw(pixel, new Rectangle(innerRect.X + 2, innerRect.Bottom - 2 - rSz, rSz, rSz), S6BannerBorderGold);
+            sb.Draw(pixel, new Rectangle(innerRect.Right - 2 - rSz, innerRect.Bottom - 2 - rSz, rSz, rSz), S6BannerBorderGold);
+
+            // Crisp monster title
             float opticalY = Localization.Loc.IsChinese ? -size.Y * 0.09f : 0f;
-            Vector2 textPos = new(MathF.Round(cx - size.X * 0.5f), MathF.Round(topY + padY + opticalY));
-            sb.DrawString(font, name, textPos + Vector2.One, Color.Black * 0.75f, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
+            Vector2 textPos = new(MathF.Round(cx - size.X * 0.5f), MathF.Round(innerRect.Y + padY + opticalY));
+            sb.DrawString(font, name, textPos + Vector2.One, Color.Black * 0.85f, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
             sb.DrawString(font, name, textPos, S6BannerText, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
 
-            int barW = Math.Max(bgW, (int)MathF.Round(140f * scale));
-            int barH = Math.Max(6, (int)MathF.Round(7f * scale));
-            DrawS6SegmentedBar(sb, pixel, cx, bgRect.Bottom + 3, health ?? 1f, steps: 20, barW, barH);
+            // Integrated HP bar inside the bottom of the card
+            int barW = Math.Max(40, cardW - Math.Max(20, (int)MathF.Round(24f * scale)));
+            int barTopY = innerRect.Y + padY + (int)MathF.Ceiling(size.Y) + barGap;
+            DrawS6SegmentedBar(sb, pixel, cx, barTopY, health ?? 1f, steps: 16, barW, barH);
         }
 
         private static void DrawBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color, float depth)

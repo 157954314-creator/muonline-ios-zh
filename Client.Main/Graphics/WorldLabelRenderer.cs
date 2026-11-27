@@ -67,16 +67,31 @@ namespace Client.Main.Graphics
                 return;
 
             var size = font.MeasureString(text) * scale;
-            int padX = 4, padY = 2;
+            int padX = 7, padY = 3;
             var rect = new Rectangle(
-                (int)(screen.X - size.X * 0.5f) - padX,
-                (int)(screen.Y - size.Y) - padY,
-                (int)(size.X) + padX * 2,
-                (int)(size.Y) + padY * 2);
+                (int)System.MathF.Round(screen.X - size.X * 0.5f) - padX,
+                (int)System.MathF.Round(screen.Y - size.Y) - padY,
+                (int)System.MathF.Ceiling(size.X) + padX * 2,
+                (int)System.MathF.Ceiling(size.Y) + padY * 2);
 
-            DrawSimpleBackground(sb, gd, rect, bgColor, layer);
+            var pixel = GetWhitePixel(gd);
+            // Soft drop shadow
+            sb.Draw(pixel, new Rectangle(rect.X + 1, rect.Y + 2, rect.Width, rect.Height), null, Color.Black * 0.42f, 0f, Vector2.Zero, SpriteEffects.None, layer);
+            // Deep obsidian translucent backing
+            Color plateBg = new Color(10, 12, 18, 212);
+            sb.Draw(pixel, rect, null, plateBg, 0f, Vector2.Zero, SpriteEffects.None, layer);
+            // Subtle rarity-tinted metallic hairline border + top sheen
+            Color borderCol = Color.Lerp(textColor, new Color(188, 156, 94), 0.35f) * 0.62f;
+            sb.Draw(pixel, new Rectangle(rect.X, rect.Y, rect.Width, 1), null, borderCol, 0f, Vector2.Zero, SpriteEffects.None, layer);
+            sb.Draw(pixel, new Rectangle(rect.X, rect.Bottom - 1, rect.Width, 1), null, borderCol * 0.8f, 0f, Vector2.Zero, SpriteEffects.None, layer);
+            sb.Draw(pixel, new Rectangle(rect.X, rect.Y, 1, rect.Height), null, borderCol * 0.85f, 0f, Vector2.Zero, SpriteEffects.None, layer);
+            sb.Draw(pixel, new Rectangle(rect.Right - 1, rect.Y, 1, rect.Height), null, borderCol * 0.85f, 0f, Vector2.Zero, SpriteEffects.None, layer);
+            sb.Draw(pixel, new Rectangle(rect.X + 1, rect.Y + 1, System.Math.Max(1, rect.Width - 2), 1), null, Color.White * 0.12f, 0f, Vector2.Zero, SpriteEffects.None, layer);
+
             float opticalY = Localization.Loc.IsChinese ? -size.Y * 0.09f : 0f;
-            sb.DrawString(font, text, new Vector2(rect.X + padX, rect.Y + padY + opticalY), textColor, 0f, Vector2.Zero, scale, SpriteEffects.None, layer);
+            Vector2 textPos = new(System.MathF.Round(rect.X + padX), System.MathF.Round(rect.Y + padY + opticalY));
+            sb.DrawString(font, text, textPos + Vector2.One, Color.Black * 0.88f, 0f, Vector2.Zero, scale, SpriteEffects.None, layer);
+            sb.DrawString(font, text, textPos, textColor, 0f, Vector2.Zero, scale, SpriteEffects.None, layer);
         }
     }
 }

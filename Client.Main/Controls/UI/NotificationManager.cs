@@ -21,7 +21,7 @@ namespace Client.Main.Controls.UI
 
         private const int MAX_NOTICES = 6;
         private const float NOTICE_INTERVAL_SECONDS = 12f;
-        private const float ORIGINAL_NOTICE_FIRST_LINE = 300f / 480f;
+        private const float ORIGINAL_NOTICE_FIRST_LINE = 264f / 480f;
         private const float ORIGINAL_NOTICE_LINE_HEIGHT = 13f / 480f;
 
         // ───────────────────────── Constructors ─────────────────────────
