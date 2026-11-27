@@ -1,79 +1,104 @@
-﻿using Client.Main.Controls.UI;
-using Microsoft.CodeAnalysis;
-using Microsoft.Xna.Framework.Input;
+﻿#nullable enable
+using Android.App;
+using Android.Text;
+using Android.Views;
+using Android.Views.InputMethods;
+using Android.Widget;
+using Client.Main;
+using Client.Main.Controls.UI;
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace MuAndroid
 {
     public class AndroidTextFieldControl : TextFieldControl
     {
+        private int _dialogOpen;
+
         public override void OnFocus()
         {
             base.OnFocus();
 
-            Task.Run(async () =>
+            var activity = MainActivity.Instance;
+            if (activity == null || activity.IsFinishing || activity.IsDestroyed)
+                return;
+
+            if (Interlocked.Exchange(ref _dialogOpen, 1) != 0)
+                return;
+
+            string title = !string.IsNullOrWhiteSpace(Label)
+                ? Label
+                : (MaskValue ? "请输入密码" : "请输入内容");
+            string hint = !string.IsNullOrWhiteSpace(Placeholder)
+                ? Placeholder
+                : (MaskValue ? "输入密码" : "点击输入");
+            string currentValue = Value ?? string.Empty;
+            bool isPassword = MaskValue;
+
+            activity.RunOnUiThread(() =>
             {
-                var result = await KeyboardInput.Show(
-                    title: Label,
-                    description: Placeholder,
-                    defaultText: Value,
-                    usePasswordMode: MaskValue
-                );
-
-                if (result != null)
-                    Value = result;
-            }).ConfigureAwait(false);
-
-
-            //// Subscribe to Android text input event (Critical for soft keyboard and scrcpy)
-            //AndroidKeyboard.TextInput += OnTextInput;
-            //AndroidKeyboard.Show();
-        }
-
-        public override void OnBlur()
-        {
-            base.OnBlur();
-
-            //AndroidKeyboard.TextInput -= OnTextInput;
-            //AndroidKeyboard.Hide();
-        }
-
-        private void OnTextInput(object sender, TextInputEventArgs e)
-        {
-            bool textChanged = false;
-
-            // Handle control keys by character or key code
-            if (e.Character == '\r' || e.Key == Keys.Enter)
-            {
-                OnEnterKeyPressed();
-                OnValueChanged();
-                return; // Enter usually consumes the event
-            }
-            else if (e.Character == '\b' || e.Key == Keys.Back)
-            {
-                // Backspace - delete last character
-                if (_inputText.Length > 0)
+                try
                 {
-                    _inputText.Remove(_inputText.Length - 1, 1);
-                    textChanged = true;
-                }
-            }
-            else if (e.Character != '\0' && !char.IsControl(e.Character))
-            {
-                // Standard printable character input
-                _inputText.Append(e.Character);
-                textChanged = true;
-            }
+                    if (activity.IsFinishing || activity.IsDestroyed)
+                    {
+                        Interlocked.Exchange(ref _dialogOpen, 0);
+                        return;
+                    }
 
-            if (textChanged)
-            {
-                UpdateScrollOffset();
-                MoveCursorToEnd();
-                OnValueChanged();
-            }
+                    var container = new FrameLayout(activity);
+                    int padX = (int)(20 * activity.Resources!.DisplayMetrics!.Density);
+                    int padY = (int)(12 * activity.Resources.DisplayMetrics.Density);
+                    container.SetPadding(padX, padY, padX, padY / 2);
+
+                    var editText = new EditText(activity)
+                    {
+                        Text = currentValue,
+                        Hint = hint,
+                        InputType = isPassword
+                            ? (InputTypes.ClassText | InputTypes.TextVariationPassword)
+                            : (InputTypes.ClassText | InputTypes.TextFlagNoSuggestions)
+                    };
+                    editText.SetSingleLine(true);
+                    editText.SetSelection(editText.Text?.Length ?? 0);
+                    container.AddView(editText, new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MatchParent,
+                        ViewGroup.LayoutParams.WrapContent));
+
+                    var builder = new AlertDialog.Builder(activity, Android.Resource.Style.ThemeDeviceDefaultDialogAlert)
+                        .SetTitle(title)
+                        .SetView(container)
+                        .SetCancelable(true)
+                        .SetPositiveButton("确定", (_, _) =>
+                        {
+                            string entered = editText.Text ?? string.Empty;
+                            MuGame.ScheduleOnMainThread(() =>
+                            {
+                                Value = entered;
+                                OnBlur();
+                            });
+                        })
+                        .SetNegativeButton("取消", (_, _) =>
+                        {
+                            MuGame.ScheduleOnMainThread(OnBlur);
+                        });
+
+                    var dialog = builder.Create()!;
+                    dialog.DismissEvent += (_, _) => Interlocked.Exchange(ref _dialogOpen, 0);
+                    dialog.Window?.SetSoftInputMode(SoftInput.StateAlwaysVisible);
+                    dialog.Show();
+
+                    editText.RequestFocus();
+                    editText.PostDelayed(() =>
+                    {
+                        var imm = activity.GetSystemService(Android.Content.Context.InputMethodService) as InputMethodManager;
+                        imm?.ShowSoftInput(editText, ShowFlags.Implicit);
+                    }, 80);
+                }
+                catch
+                {
+                    Interlocked.Exchange(ref _dialogOpen, 0);
+                }
+            });
         }
     }
 }

@@ -274,6 +274,15 @@ namespace MuAndroid
                 rootContainer.SetBackgroundColor(Android.Graphics.Color.Black);
                 var lp = new Android.Widget.FrameLayout.LayoutParams(cinemaW, cinemaH, GravityFlags.Center);
                 rootContainer.AddView(_view, lp);
+                _view.LayoutChange += (_, e) =>
+                {
+                    int w = e.Right - e.Left;
+                    int h = e.Bottom - e.Top;
+                    if (w > 0 && h > 0 && _game != null)
+                    {
+                        Client.Main.MuGame.ScheduleOnMainThread(() => _game.ApplyMobileDisplaySize(w, h));
+                    }
+                };
                 SetContentView(rootContainer);
 
                 // IMPORTANT: Configure immersive mode AFTER SetContentView

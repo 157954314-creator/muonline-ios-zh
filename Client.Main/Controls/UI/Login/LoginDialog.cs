@@ -111,11 +111,15 @@ namespace Client.Main.Controls.UI.Login
             });
 
             _userInput = TextFieldControl.Create();
+            _userInput.Label = Localization.Loc.IsChinese ? "请输入账号" : "Username";
+            _userInput.Placeholder = Localization.Loc.IsChinese ? "输入游戏账号" : "Username";
             _userInput.X = 100;
             _userInput.Y = 87;
             _userInput.Skin = TextFieldSkin.NineSlice;
 
             _passwordInput = TextFieldControl.Create();
+            _passwordInput.Label = Localization.Loc.IsChinese ? "请输入密码" : "Password";
+            _passwordInput.Placeholder = Localization.Loc.IsChinese ? "输入游戏密码" : "Password";
             _passwordInput.X = 100;
             _passwordInput.Y = 117;
             _passwordInput.MaskValue = true;
