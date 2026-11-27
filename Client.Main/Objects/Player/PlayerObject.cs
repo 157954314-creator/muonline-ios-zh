@@ -3158,12 +3158,11 @@ namespace Client.Main.Objects.Player
             bool relaxedSafeZone = IsRelaxedSafeZone(world, flags);
             var weapons = GetWeaponContext();
             bool isInChaosCastle = IsChaosCastleMap(world.WorldIndex);
-            bool isSwimming = world.WorldIndex == 8 && !isInSafeZone && !HasEquippedWings;
-            UpdateWeaponHolsterState(relaxedSafeZone || (isSwimming && !IsOneShotPlaying));
-            UpdateVehicleState(isInSafeZone);
-
             bool pathQueued = _currentPath?.Count > 0;
             bool isAboutToMove = IsMoving || pathQueued || MovementIntent;
+            bool isSwimming = world.WorldIndex == 8 && !isInSafeZone && !HasEquippedWings;
+            UpdateWeaponHolsterState(relaxedSafeZone || (isSwimming && isAboutToMove && !IsOneShotPlaying));
+            UpdateVehicleState(isInSafeZone);
 
             var mode = (!IsMoving && (pathQueued || MovementIntent))
                 ? GetModeFromCurrentAction()
@@ -3215,11 +3214,15 @@ namespace Client.Main.Objects.Player
                     // Sync vehicle animation
                     Vehicle?.SetRiderAnimation(isMoving: false);
                 }
-                else if (world.WorldIndex == 8 && !isInSafeZone)
+                else if (world.WorldIndex == 8 && !isInSafeZone && HasEquippedWings)
                 {
                     idleAction = weapons.PrimaryKind == WeaponKind.Crossbow
                         ? PlayerAction.PlayerStopFlyCrossbow
                         : PlayerAction.PlayerStopFly;
+                }
+                else if (world.WorldIndex == 8 && !isInSafeZone)
+                {
+                    idleAction = GetIdleAction(MovementMode.Walk, weapons, isInSafeZone, isInChaosCastle);
                 }
                 else
                 {
@@ -3243,7 +3246,7 @@ namespace Client.Main.Objects.Player
             var weapons = GetWeaponContext();
             bool isInChaosCastle = IsChaosCastleMap(world.WorldIndex);
             bool isSwimming = world.WorldIndex == 8 && !isInSafeZone && !HasEquippedWings;
-            UpdateWeaponHolsterState(relaxedSafeZone || (isSwimming && !IsOneShotPlaying));
+            UpdateWeaponHolsterState(relaxedSafeZone || (isSwimming && isAboutToMove && !IsOneShotPlaying));
             UpdateVehicleStateFromAppearance(isInSafeZone);
 
             var mode = (!IsMoving && (pathQueued || MovementIntent))
@@ -3295,11 +3298,15 @@ namespace Client.Main.Objects.Player
                     // Sync vehicle animation
                     Vehicle?.SetRiderAnimation(isMoving: false);
                 }
-                else if (world.WorldIndex == 8 && !isInSafeZone)
+                else if (world.WorldIndex == 8 && !isInSafeZone && HasEquippedWings)
                 {
                     idleAction = weapons.PrimaryKind == WeaponKind.Crossbow
                         ? PlayerAction.PlayerStopFlyCrossbow
                         : PlayerAction.PlayerStopFly;
+                }
+                else if (world.WorldIndex == 8 && !isInSafeZone)
+                {
+                    idleAction = GetIdleAction(MovementMode.Walk, weapons, isInSafeZone, isInChaosCastle);
                 }
                 else
                 {
