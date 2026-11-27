@@ -387,6 +387,19 @@ namespace Client.Main.Objects
             }
         }
 
+        private static readonly DepthStencilState ProjectedShadowStencilState = new()
+        {
+            DepthBufferEnable = true,
+            DepthBufferWriteEnable = false,
+            DepthBufferFunction = CompareFunction.LessEqual,
+            StencilEnable = true,
+            StencilFunction = CompareFunction.Equal,
+            ReferenceStencil = 0,
+            StencilPass = StencilOperation.IncrementSaturation,
+            StencilFail = StencilOperation.Keep,
+            StencilDepthBufferFail = StencilOperation.Keep,
+        };
+
         /// <summary>Draws the queued projected shadows, skinned ones first; called at the ground shadow batch end.</summary>
         /// <param name="maskViewProjection">Set when drawing into <see cref="GroundShadowMask"/> (no depth test).</param>
         /// <param name="keepQueued">Leaves the queue for the screen draw that follows.</param>
@@ -417,8 +430,23 @@ namespace Client.Main.Objects
             try
             {
                 float constBias = 1f / (1 << 24);
+                bool isScreenPass = !maskViewProjection.HasValue;
+                bool useStencilForOpaque = false;
+                if (isScreenPass)
+                {
+                    try
+                    {
+                        gd.Clear(ClearOptions.Stencil, Color.Transparent, 0f, 0);
+                        useStencilForOpaque = true;
+                    }
+                    catch
+                    {
+                        useStencilForOpaque = false;
+                    }
+                }
+
                 gd.BlendState = Blendings.ShadowBlend;
-                gd.DepthStencilState = maskViewProjection.HasValue ? DepthStencilState.None : DepthStencilState.DepthRead;
+                gd.DepthStencilState = isScreenPass ? DepthStencilState.DepthRead : DepthStencilState.None;
                 gd.RasterizerState = maskViewProjection.HasValue
                     ? RasterizerState.CullNone
                     : GraphicsManager.GetCachedRasterizerState(constBias * -20, CullMode.None);
@@ -437,13 +465,21 @@ namespace Client.Main.Objects
                     if (technique == null)
                         continue;
 
+                    if (isScreenPass)
+                        gd.DepthStencilState = (opaquePass && useStencilForOpaque) ? ProjectedShadowStencilState : DepthStencilState.DepthRead;
+
+                    // Keep screen-space projected shadows soft and natural instead of 100% pitch-black ink:
+                    // - Opaque casters (characters/trunks): stencil-guarded single-pass 40% shade.
+                    // - Alpha-cutout foliage (overlapping leaves): gentle 16% per layer for dappled shade.
+                    float opacityScale = !isScreenPass ? 1f : (opaquePass ? 0.40f : 0.16f);
+
                     for (int i = 0; i < s_projectedShadowDraws.Count; i++)
                     {
                         ProjectedShadowDraw draw = s_projectedShadowDraws[i];
                         if (draw.Skinned == skinnedPass && draw.Opaque == opaquePass &&
                             (!maskViewProjection.HasValue || !Constants.ENABLE_GRASS_SHADOW_CULLING ||
                              ProjectedShadowReachesGrassReceivers(terrain, in draw)))
-                            DrawProjectedShadow(gd, effect, bindings, technique, terrain, in draw);
+                            DrawProjectedShadow(gd, effect, bindings, technique, terrain, in draw, opacityScale);
                     }
                 }
             }
@@ -594,7 +630,7 @@ namespace Client.Main.Objects
         }
 
         private static void DrawProjectedShadow(GraphicsDevice gd, Effect effect, ModelEffectBindings bindings,
-            EffectTechnique technique, Controls.TerrainControl terrain, in ProjectedShadowDraw draw)
+            EffectTechnique technique, Controls.TerrainControl terrain, in ProjectedShadowDraw draw, float opacityScale = 1f)
         {
             ModelObject owner = draw.Owner;
             if (owner.Status == Models.GameControlStatus.Disposed || !owner.Visible)
@@ -677,10 +713,11 @@ namespace Client.Main.Objects
                 bindings.ProjectedShadowMatrix?.SetValue(draw.ShadowWorld);
                 last.ShadowWorld = draw.ShadowWorld;
             }
-            if (!last.Valid || last.Opacity != draw.Opacity)
+            float effectiveOpacity = Math.Clamp(draw.Opacity * opacityScale, 0f, 1f);
+            if (!last.Valid || last.Opacity != effectiveOpacity)
             {
-                bindings.ProjectedShadowOpacity?.SetValue(draw.Opacity);
-                last.Opacity = draw.Opacity;
+                bindings.ProjectedShadowOpacity?.SetValue(effectiveOpacity);
+                last.Opacity = effectiveOpacity;
             }
             if (!last.Valid || last.Opaque != opaque)
             {

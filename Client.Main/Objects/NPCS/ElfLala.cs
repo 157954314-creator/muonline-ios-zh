@@ -21,6 +21,7 @@ namespace Client.Main.Objects.NPCS
         public override async Task Load()
         {
             ExtraHeight = 90f;
+            BlendMesh = 1;
             Model = await BMDLoader.Instance.Prepare($"NPC/ElfWizard01.bmd");
             await base.Load();
         }

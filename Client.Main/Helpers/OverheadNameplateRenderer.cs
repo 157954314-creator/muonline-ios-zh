@@ -12,7 +12,7 @@ namespace Client.Main.Helpers
         private readonly struct QueuedNameplate
         {
             public QueuedNameplate(SpriteFont font, Vector3 screen, string name, float? healthFraction, float renderScale,
-                bool hoverLabel = false)
+                bool hoverLabel = false, bool monsterCompactBar = false, bool monsterTopBanner = false)
             {
                 Font = font;
                 Screen = screen;
@@ -20,6 +20,8 @@ namespace Client.Main.Helpers
                 HealthFraction = healthFraction;
                 RenderScale = renderScale;
                 HoverLabel = hoverLabel;
+                MonsterCompactBar = monsterCompactBar;
+                MonsterTopBanner = monsterTopBanner;
             }
 
             public SpriteFont Font { get; }
@@ -28,7 +30,12 @@ namespace Client.Main.Helpers
             public float? HealthFraction { get; }
             public float RenderScale { get; }
             public bool HoverLabel { get; }
+            public bool MonsterCompactBar { get; }
+            public bool MonsterTopBanner { get; }
         }
+
+        /// <summary>S6-style F8 toggle: shows compact 8-segment HP bars over monsters without cluttered name boxes.</summary>
+        public static bool ShowMonsterOverheadBars { get; set; } = true;
 
         // 13 px: an ArialUi size, so the glyphs are drawn 1:1 (scaled glyphs go soft and uneven).
         private const float BaseNameScale = 13f / Constants.BASE_FONT_SIZE;
@@ -122,6 +129,23 @@ namespace Client.Main.Helpers
             s_queue.Add(new QueuedNameplate(null, screen, name, null, renderScale, hoverLabel: true));
         }
 
+        /// <summary>S6-style compact 8-segment red HP bar drawn over a monster without a cluttered name box.</summary>
+        public static void EnqueueMonsterOverheadBar(Vector3 screen, float healthFraction, float renderScale)
+        {
+            s_queue.Add(new QueuedNameplate(null, screen, string.Empty, Math.Clamp(healthFraction, 0f, 1f), renderScale,
+                monsterCompactBar: true));
+        }
+
+        /// <summary>S6-style top-center crimson monster name banner + 20-segment red HP bar on hover.</summary>
+        public static void EnqueueMonsterTopBanner(string name, float? healthFraction, float renderScale)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return;
+
+            s_queue.Add(new QueuedNameplate(null, Vector3.Zero, name, healthFraction, renderScale,
+                monsterTopBanner: true));
+        }
+
         /// <param name="targetScale">Size of the target drawn into relative to the scene target the positions were
         /// projected in (1 / render scale when drawn on the window).</param>
         public static void FlushQueuedNameplates(SpriteBatch spriteBatch, float targetScale = 1f)
@@ -133,13 +157,12 @@ namespace Client.Main.Helpers
             bool hasScope = false;
             if (!SpriteBatchScope.BatchIsBegun)
             {
-                // The UI fonts are built with premultiplied alpha; NonPremultiplied would apply the glyph
-                // coverage twice and leave thin, ragged edges. Glyphs are drawn 1:1, hence point sampling.
+                // Use LinearClamp so scaled CJK glyphs (NotoSC 22px/14px) stay smooth instead of jagged point-sampling.
                 scope = new SpriteBatchScope(
                     spriteBatch,
                     SpriteSortMode.Deferred,
                     BlendState.AlphaBlend,
-                    SamplerState.PointClamp,
+                    SamplerState.LinearClamp,
                     DepthStencilState.None);
                 hasScope = true;
             }
@@ -155,6 +178,16 @@ namespace Client.Main.Helpers
                     if (entry.HoverLabel)
                     {
                         DrawHoverLabel(spriteBatch, screen, entry.Name, entry.RenderScale * targetScale);
+                        continue;
+                    }
+                    if (entry.MonsterCompactBar)
+                    {
+                        DrawS6MonsterOverheadBar(spriteBatch, screen, entry.HealthFraction ?? 1f, entry.RenderScale * targetScale);
+                        continue;
+                    }
+                    if (entry.MonsterTopBanner)
+                    {
+                        DrawS6MonsterTopBanner(spriteBatch, entry.Name, entry.HealthFraction, entry.RenderScale * targetScale);
                         continue;
                     }
 
@@ -242,7 +275,8 @@ namespace Client.Main.Helpers
                 innerHeight);
 
             float depth = MathHelper.Clamp(screen.Z, 0f, 1f);
-            Vector2 textPos = new(MathF.Round(nameRect.X + padX), MathF.Round(nameRect.Y + padY));
+            float opticalY = Localization.Loc.IsChinese ? -nameSize.Y * 0.09f : 0f;
+            Vector2 textPos = new(MathF.Round(nameRect.X + padX), MathF.Round(nameRect.Y + padY + opticalY));
 
             spriteBatch.Draw(pixel, nameRect, null, Theme.BgDarkest * 0.85f, 0f, Vector2.Zero, SpriteEffects.None, depth);
             DrawBorder(spriteBatch, pixel, nameRect, Theme.BorderOuter * 0.9f, depth);
@@ -319,10 +353,91 @@ namespace Client.Main.Helpers
 
             // Premultiplied colours (AlphaBlend).
             spriteBatch.Draw(pixel, bgRect, new Color(30, 50, 70) * (150f / 255f));
-            spriteBatch.DrawString(font, name, textPos + Vector2.One, Color.Black * 0.7f, 0f, Vector2.Zero, fontScale,
+            float opticalY = Localization.Loc.IsChinese ? -size.Y * 0.09f : 0f;
+            Vector2 drawPos = new(textPos.X, MathF.Round(textPos.Y + opticalY));
+            spriteBatch.DrawString(font, name, drawPos + Vector2.One, Color.Black * 0.7f, 0f, Vector2.Zero, fontScale,
                 SpriteEffects.None, 0f);
-            spriteBatch.DrawString(font, name, textPos, new Color(176, 224, 230, 255), 0f, Vector2.Zero, fontScale,
+            spriteBatch.DrawString(font, name, drawPos, new Color(176, 224, 230, 255), 0f, Vector2.Zero, fontScale,
                 SpriteEffects.None, 0f);
+        }
+
+        private static readonly Color S6BannerBg = new(100, 0, 0, 220);
+        private static readonly Color S6BannerText = new(255, 230, 200, 255);
+        private static readonly Color S6BarBack = new(51, 0, 0, 255);       // 0xFF330000
+        private static readonly Color S6BarTrack = new(50, 10, 0, 255);     // 0xFF320A00
+        private static readonly Color S6BarFill = new(250, 10, 0, 255);     // 0xFFFA0A00
+
+        private static void DrawS6SegmentedBar(SpriteBatch sb, Texture2D pixel, int centerX, int topY, float health, int steps, int totalWidth, int barHeight)
+        {
+            int x = centerX - totalWidth / 2;
+            int border = 1;
+            int innerW = Math.Max(4, totalWidth - border * 2);
+            int innerH = Math.Max(2, barHeight - border * 2);
+
+            // Drop shadow + dark crimson backing + inner track
+            sb.Draw(pixel, new Rectangle(x + 1, topY + 1, totalWidth, barHeight), Color.Black * 0.55f);
+            sb.Draw(pixel, new Rectangle(x, topY, totalWidth, barHeight), S6BarBack);
+            sb.Draw(pixel, new Rectangle(x + border, topY + border, innerW, innerH), S6BarTrack);
+
+            float clamped = Math.Clamp(health, 0f, 1f);
+            int filledSteps = clamped <= 0f ? 0 : Math.Max(1, (int)MathF.Ceiling(clamped * steps));
+            float stepW = innerW / (float)steps;
+            for (int k = 0; k < filledSteps; k++)
+            {
+                int sx = x + border + (int)MathF.Floor(k * stepW);
+                int sw = Math.Max(1, (int)MathF.Floor((k + 1) * stepW) - (int)MathF.Floor(k * stepW) - 1);
+                sb.Draw(pixel, new Rectangle(sx, topY + border, sw, innerH), S6BarFill);
+            }
+        }
+
+        private static void DrawS6MonsterOverheadBar(SpriteBatch sb, Vector3 screen, float health, float renderScale)
+        {
+            var pixel = GraphicsManager.Instance.Pixel;
+            if (pixel == null || pixel.IsDisposed)
+                return;
+
+            var viewport = sb.GraphicsDevice.Viewport;
+            int cx = (int)MathF.Round(screen.X);
+            int topY = (int)MathF.Round(screen.Y - 6f * MathF.Max(renderScale, 0.5f));
+            if (cx < -60 || cx > viewport.Width + 60 || topY < -20 || topY > viewport.Height + 20)
+                return;
+
+            int barW = Math.Clamp((int)MathF.Round(56f * MathF.Max(renderScale, 0.7f)), 42, 72);
+            int barH = Math.Clamp((int)MathF.Round(5f * MathF.Max(renderScale, 0.7f)), 4, 7);
+            DrawS6SegmentedBar(sb, pixel, cx, topY, health, steps: 8, barW, barH);
+        }
+
+        private static void DrawS6MonsterTopBanner(SpriteBatch sb, string name, float? health, float renderScale)
+        {
+            var pixel = GraphicsManager.Instance.Pixel;
+            if (pixel == null || pixel.IsDisposed)
+                return;
+
+            var viewport = sb.GraphicsDevice.Viewport;
+            float scale = MathF.Max(renderScale, 0.75f);
+            var font = GetCrispFont(14f * scale, out float fontScale);
+            if (font == null)
+                return;
+
+            Vector2 size = font.MeasureString(name) * fontScale;
+            int cx = viewport.Width / 2;
+            int topY = (int)MathF.Round(8f * scale);
+            int padX = Math.Max(8, (int)MathF.Round(10f * scale));
+            int padY = Math.Max(2, (int)MathF.Round(3f * scale));
+            int bgW = Math.Max((int)MathF.Ceiling(size.X) + padX * 2, (int)MathF.Round(128f * scale));
+            int bgH = (int)MathF.Ceiling(size.Y) + padY * 2;
+            var bgRect = new Rectangle(cx - bgW / 2, topY, bgW, bgH);
+
+            sb.Draw(pixel, bgRect, S6BannerBg);
+            DrawBorder(sb, pixel, bgRect, new Color(45, 0, 0, 240), 0f);
+            float opticalY = Localization.Loc.IsChinese ? -size.Y * 0.09f : 0f;
+            Vector2 textPos = new(MathF.Round(cx - size.X * 0.5f), MathF.Round(topY + padY + opticalY));
+            sb.DrawString(font, name, textPos + Vector2.One, Color.Black * 0.75f, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
+            sb.DrawString(font, name, textPos, S6BannerText, 0f, Vector2.Zero, fontScale, SpriteEffects.None, 0f);
+
+            int barW = Math.Max(bgW, (int)MathF.Round(140f * scale));
+            int barH = Math.Max(6, (int)MathF.Round(7f * scale));
+            DrawS6SegmentedBar(sb, pixel, cx, bgRect.Bottom + 3, health ?? 1f, steps: 20, barW, barH);
         }
 
         private static void DrawBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, Color color, float depth)

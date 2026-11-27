@@ -3158,7 +3158,8 @@ namespace Client.Main.Objects.Player
             bool relaxedSafeZone = IsRelaxedSafeZone(world, flags);
             var weapons = GetWeaponContext();
             bool isInChaosCastle = IsChaosCastleMap(world.WorldIndex);
-            UpdateWeaponHolsterState(isInSafeZone);
+            bool isSwimming = world.WorldIndex == 8 && !isInSafeZone && !HasEquippedWings;
+            UpdateWeaponHolsterState(relaxedSafeZone || (isSwimming && !IsOneShotPlaying));
             UpdateVehicleState(isInSafeZone);
 
             bool pathQueued = _currentPath?.Count > 0;
@@ -3241,7 +3242,8 @@ namespace Client.Main.Objects.Player
             bool relaxedSafeZone = IsRelaxedSafeZone(world, flags);
             var weapons = GetWeaponContext();
             bool isInChaosCastle = IsChaosCastleMap(world.WorldIndex);
-            UpdateWeaponHolsterState(isInSafeZone);
+            bool isSwimming = world.WorldIndex == 8 && !isInSafeZone && !HasEquippedWings;
+            UpdateWeaponHolsterState(relaxedSafeZone || (isSwimming && !IsOneShotPlaying));
             UpdateVehicleStateFromAppearance(isInSafeZone);
 
             var mode = (!IsMoving && (pathQueued || MovementIntent))

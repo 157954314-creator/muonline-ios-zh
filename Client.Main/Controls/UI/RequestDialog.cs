@@ -105,7 +105,7 @@ namespace Client.Main.Controls.UI
 
             _label = new LabelControl
             {
-                FontSize = 14f,
+                FontSize = 10.5f,
                 TextColor = Theme.TextWhite,
                 TextAlign = HorizontalAlign.Center
             };
@@ -185,7 +185,7 @@ namespace Client.Main.Controls.UI
         private void SetInfoMode()
         {
             _infoOnly = true;
-            _acceptButton.Text = "OK";
+            _acceptButton.Text = Localization.Loc.IsChinese ? "确定" : "OK";
             AdjustButtonSize(_acceptButton);
             _rejectButton.Visible = false;
             AdjustSizeAndLayout();
@@ -234,32 +234,32 @@ namespace Client.Main.Controls.UI
 
             float scale = _label.FontSize / Constants.BASE_FONT_SIZE;
             float maxWidth = BASE_BG_WIDTH - SIDE_PAD * 2;
-            var words = _rawText.Split(' ');
             var sb = new StringBuilder();
-            var current = new StringBuilder();
+            string[] paragraphs = _rawText.Replace("\r\n", "\n").Split('\n');
 
-            foreach (var w in words)
+            for (int p = 0; p < paragraphs.Length; p++)
             {
-                string test = (current.Length == 0) ? w : current + " " + w;
-                float tw = font.MeasureString(test).X * scale;
+                if (p > 0) sb.Append('\n');
+                string para = paragraphs[p];
+                if (string.IsNullOrEmpty(para)) continue;
 
-                if (tw <= maxWidth)
+                var current = new StringBuilder();
+                foreach (char ch in para)
                 {
-                    current.Clear();
-                    current.Append(test);
+                    string candidate = current.ToString() + ch;
+                    if (current.Length > 0 && font.MeasureString(candidate).X * scale > maxWidth)
+                    {
+                        sb.Append(current);
+                        sb.Append('\n');
+                        current.Clear();
+                        if (ch == ' ') continue;
+                    }
+                    current.Append(ch);
                 }
-                else
+                if (current.Length > 0)
                 {
-                    if (sb.Length > 0) sb.Append('\n');
                     sb.Append(current);
-                    current.Clear();
-                    current.Append(w);
                 }
-            }
-            if (current.Length > 0)
-            {
-                if (sb.Length > 0) sb.Append('\n');
-                sb.Append(current);
             }
 
             _label.Text = sb.ToString();
@@ -272,9 +272,9 @@ namespace Client.Main.Controls.UI
             => new ButtonControl
             {
                 Text = text,
-                FontSize = 12f,
-                ViewSize = new Point(70, 30),
-                ControlSize = new Point(70, 30),
+                FontSize = 10.5f,
+                ViewSize = new Point(70, 28),
+                ControlSize = new Point(70, 28),
                 BackgroundColor = bg,
                 HoverBackgroundColor = bgH,
                 PressedBackgroundColor = bgP,

@@ -1142,26 +1142,37 @@ namespace Client.Main.Controls
 
         public bool IsWalkable(Vector2 position)
         {
-            var terrainFlag = Terrain.RequestTerrainFlag((int)position.X, (int)position.Y);
+            int tileX = (int)position.X;
+            int tileY = (int)position.Y;
+            var terrainFlag = Terrain.RequestTerrainFlag(tileX, tileY);
             bool hasNoMove = terrainFlag.HasFlag(TWFlags.NoMove);
+            bool hasNoGround = terrainFlag.HasFlag(TWFlags.NoGround);
 
-            // In Blood Castle, when the event is active (timer started), allow crossing the bridge
-            // even if NoMove flag is set (the bridge area is normally blocked until event starts)
-            if (hasNoMove && UI.Game.BloodCastleTimeControl.IsEventActive)
+            // In Blood Castle, only the official dynamic bridge/gate/sanctuary tiles unlock during an active event.
+            // Never allow walking off the bridge into surrounding NoMove/NoGround abyss tiles.
+            if ((hasNoMove || hasNoGround) && UI.Game.BloodCastleTimeControl.IsEventActive)
             {
-                // Check if we're on a Blood Castle map (map IDs 11-17 and 52)
                 var charState = MuGame.Network?.GetCharacterState();
                 if (charState != null)
                 {
                     var mapId = charState.MapId;
                     if ((mapId >= 11 && mapId <= 17) || mapId == 52)
                     {
-                        return true; // Allow movement during active Blood Castle event
+                        bool inBridgeEntrance = tileX >= 13 && tileX <= 15 && tileY >= 15 && tileY <= 23;
+                        bool inBridgeEnd = tileX >= 13 && tileX <= 15 && tileY >= 70 && tileY <= 75;
+                        bool inCastleGate = tileX >= 13 && tileX <= 15 && tileY >= 76 && tileY <= 79;
+                        bool inSanctuary = (tileX >= 8 && tileX <= 11 && tileY >= 78 && tileY <= 83)
+                                        || (tileX >= 11 && tileX <= 25 && tileY >= 78 && tileY <= 89);
+
+                        if (inBridgeEntrance || inBridgeEnd || inCastleGate || inSanctuary)
+                        {
+                            return true;
+                        }
                     }
                 }
             }
 
-            return !hasNoMove;
+            return !hasNoMove && !hasNoGround;
         }
 
         private void OnObjectAdded(WorldObject worldObject)

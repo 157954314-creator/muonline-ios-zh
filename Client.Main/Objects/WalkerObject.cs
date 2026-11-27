@@ -29,6 +29,7 @@ namespace Client.Main.Objects
         protected Queue<Vector2> _currentPath;   // FIFO – cheaper removal than List.RemoveAt(0)
         private uint _moveRequestVersion;
         private CancellationTokenSource _pathRequestCancellation;
+        private float _serverGlideRemaining;
 
         public static int LastPathLength { get; private set; }
         public static double LastPathApplyMs { get; private set; }
@@ -232,6 +233,7 @@ namespace Client.Main.Objects
             MoveTargetPosition = Vector3.Zero;
             _walkDirection = Vector2.Zero;
             _movementIntent = false;
+            _serverGlideRemaining = 0f;
             _targetPositionDirty = true;
             _nextDebuffTintCheckMs = 0d;
 
@@ -248,8 +250,12 @@ namespace Client.Main.Objects
         /// </summary>
         public void StopMovement()
         {
+            CancelPendingPathRequest();
             _currentPath?.Clear();
             _currentPath = null;
+            _movementIntent = false;
+            _serverGlideRemaining = 0f;
+            unchecked { _moveRequestVersion++; }
 
             // Freeze the object at its current rendered position
             MoveTargetPosition = Position;
@@ -392,6 +398,7 @@ namespace Client.Main.Objects
                 return;
 
             _movementIntent = true;
+            _serverGlideRemaining = 0f;
             UpdateFacingFromVector(targetLocation - Location);
 
             if (this is PlayerObject player)
@@ -525,6 +532,36 @@ namespace Client.Main.Objects
             }
         }
 
+        /// <summary>
+        /// Immediately cancels any active path and synchronizes the walker to the server-authoritative tile (0x15 ObjectMoved).
+        /// For short server-driven moves (e.g. weapon skill lunges like Cyclone/Slash/Lunge or knockback <= 4.5 tiles),
+        /// mirrors S6 SourceMain5.2 JumpTime smooth exponential glide so neither the hero nor the camera jumps abruptly.
+        /// For large desyncs (> 4.5 tiles), snaps immediately to prevent straight-line sliding through walls.
+        /// </summary>
+        public void ResyncPosition(Vector2 tile)
+        {
+            CancelPendingPathRequest();
+            _currentPath?.Clear();
+            _movementIntent = false;
+            _walkDirection = Vector2.Zero;
+            unchecked { _moveRequestVersion++; }
+
+            Vector2 newTile = new((int)tile.X, (int)tile.Y);
+            float tileDist = Vector2.Distance(_location, newTile);
+
+            if (MoveTargetPosition != Vector3.Zero && tileDist <= 4.5f)
+            {
+                _location = newTile;
+                _targetPositionDirty = true;
+                _serverGlideRemaining = 0.55f;
+                return;
+            }
+
+            _serverGlideRemaining = 0f;
+            Location = newTile;
+            SnapToTerrainHeight();
+        }
+
         private void CancelPendingPathRequest()
         {
             var previous = Interlocked.Exchange(ref _pathRequestCancellation, null);
@@ -565,21 +602,9 @@ namespace Client.Main.Objects
                 return;
             }
 
-            long applyStarted = Stopwatch.GetTimestamp();
-            long queueStarted = applyStarted;
-            _currentPath ??= new Queue<Vector2>(Math.Max(16, path.Count));
-            _currentPath.Clear();
-            _currentPath.EnsureCapacity(path.Count);
-            for (int i = 0; i < path.Count; i++)
-                _currentPath.Enqueue(path[i]);
-            LastPathQueueMs = Stopwatch.GetElapsedTime(queueStarted).TotalMilliseconds;
-
-            long facingStarted = Stopwatch.GetTimestamp();
-            UpdateFacingFromVector(path[0] - Location);
-            LastPathFacingMs = Stopwatch.GetElapsedTime(facingStarted).TotalMilliseconds;
-
             LastPathBuildDirectionsMs = 0d;
             LastPathSendScheduleMs = 0d;
+            int stepLimit = path.Count;
             if (sendToServer && IsMainWalker)
             {
                 var start = pathStart ?? new Vector2((int)Location.X, (int)Location.Y);
@@ -587,17 +612,38 @@ namespace Client.Main.Objects
                 preparedDirections ??= BuildServerDirections(path, start);
                 LastPathBuildDirectionsMs = Stopwatch.GetElapsedTime(directionsStarted).TotalMilliseconds;
 
+                // MU walk protocol supports at most 15 steps per packet. Never let the local walker
+                // advance beyond the steps actually sent to the server, otherwise server/client desync
+                // triggers repeated ObjectMoved resyncs.
                 if (preparedDirections.Length > 0)
                 {
-                    // Packet construction and socket synchronization may run before the first
-                    // await. Defer the complete send so path publication remains a small mutation.
+                    stepLimit = Math.Min(path.Count, preparedDirections.Length);
                     long sendScheduleStarted = Stopwatch.GetTimestamp();
                     _ = Task.Run(() => SendWalkDirectionsToServerSafelyAsync(preparedDirections, start));
                     LastPathSendScheduleMs = Stopwatch.GetElapsedTime(sendScheduleStarted).TotalMilliseconds;
                 }
+                else
+                {
+                    _currentPath?.Clear();
+                    _movementIntent = false;
+                    return;
+                }
             }
 
-            LastPathLength = path.Count;
+            long applyStarted = Stopwatch.GetTimestamp();
+            long queueStarted = applyStarted;
+            _currentPath ??= new Queue<Vector2>(Math.Max(16, stepLimit));
+            _currentPath.Clear();
+            _currentPath.EnsureCapacity(stepLimit);
+            for (int i = 0; i < stepLimit; i++)
+                _currentPath.Enqueue(path[i]);
+            LastPathQueueMs = Stopwatch.GetElapsedTime(queueStarted).TotalMilliseconds;
+
+            long facingStarted = Stopwatch.GetTimestamp();
+            UpdateFacingFromVector(path[0] - Location);
+            LastPathFacingMs = Stopwatch.GetElapsedTime(facingStarted).TotalMilliseconds;
+
+            LastPathLength = stepLimit;
             LastPathApplyMs = Stopwatch.GetElapsedTime(applyStarted).TotalMilliseconds;
         }
 
@@ -742,12 +788,17 @@ namespace Client.Main.Objects
                     Angle = new Vector3(Angle.X, Angle.Y, _targetAngle.Z);
             }
 
-            float targetHeight =
-                MoveTargetPosition.Z +
-                worldExtraHeight +
-                ExtraHeight;
-            float interpolationFactor = 15f * deltaTime;
-            float newZ = MathHelper.Lerp(Position.Z, targetHeight, interpolationFactor);
+            // Sample the exact terrain surface under the current world XY so walking over hills,
+            // stairs, or curved corners never cuts underneath the ground, and clamp lerp factor
+            // so frame hitches never extrapolate below the terrain.
+            float groundZ = walkableWorld.Terrain != null
+                ? walkableWorld.Terrain.RequestTerrainHeight(MoveTargetPosition.X, MoveTargetPosition.Y)
+                : MoveTargetPosition.Z;
+            float targetHeight = groundZ + worldExtraHeight + ExtraHeight;
+            float interpolationFactor = MathHelper.Clamp(18f * deltaTime, 0f, 1f);
+            float newZ = targetHeight > Position.Z
+                ? targetHeight
+                : MathHelper.Lerp(Position.Z, targetHeight, interpolationFactor);
 
             Position = new Vector3(MoveTargetPosition.X, MoveTargetPosition.Y, newZ);
         }
@@ -769,8 +820,27 @@ namespace Client.Main.Objects
             if (remainingDistanceSq <= 0.0001f)
             {
                 _walkDirection = Vector2.Zero;
+                _serverGlideRemaining = 0f;
                 MoveTargetPosition = targetPosition;
                 UpdateCameraPosition(MoveTargetPosition);
+                return;
+            }
+
+            if (_serverGlideRemaining > 0f)
+            {
+                float glideDt = (float)time.ElapsedGameTime.TotalSeconds;
+                _serverGlideRemaining -= glideDt;
+                // Mirrors S6 ZzzCharacter.cpp JumpTime (Speed = 0.2 per 25fps tick -> ~5.5/s exponential ease)
+                float alpha = _serverGlideRemaining <= 0f || remainingDistanceSq <= 4f
+                    ? 1f
+                    : 1f - MathF.Exp(-8.5f * glideDt);
+                Vector3 glided = Vector3.Lerp(MoveTargetPosition, targetPosition, alpha);
+                if (alpha >= 1f)
+                {
+                    glided = targetPosition;
+                    _serverGlideRemaining = 0f;
+                }
+                UpdateCameraPosition(glided);
                 return;
             }
 

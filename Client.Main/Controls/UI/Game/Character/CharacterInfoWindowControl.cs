@@ -1168,7 +1168,7 @@ namespace Client.Main.Controls.UI.Game.Character
             if (_networkManager == null || !_networkManager.IsConnected || _networkManager.CurrentState < ClientConnectionState.InGame)
             {
                 _logger.LogWarning("Cannot increase stat: Not connected to game server or invalid state.");
-                MessageWindow.Show("Cannot add stat points: Not connected to server or not in game.");
+                MessageWindow.Show("无法分配属性点：未连接服务器或未进入游戏。");
                 return;
             }
 
@@ -1186,7 +1186,7 @@ namespace Client.Main.Controls.UI.Game.Character
                 !(_characterState.Class == CharacterClassNumber.DarkLord || _characterState.Class == CharacterClassNumber.LordEmperor))
             {
                 _logger.LogInformation("Cannot add Leadership points for non-Dark Lord character.");
-                MessageWindow.Show("Only Dark Lords can add Leadership points.");
+                MessageWindow.Show("只有圣导师职业可以增加统率属性。");
                 return;
             }
 
@@ -1199,7 +1199,7 @@ namespace Client.Main.Controls.UI.Game.Character
             else
             {
                 _logger.LogError("CharacterService is null. Cannot send stat increase request.");
-                MessageWindow.Show("Internal error: Could not add points.");
+                MessageWindow.Show("内部错误：无法增加属性点。");
             }
         }
 

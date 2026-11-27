@@ -22,6 +22,7 @@ namespace Client.Main.Controls.UI.Game.Buffs
         private Texture2D? _iconTexture;
         private Rectangle _iconSource;
         private bool _showTooltip;
+        private string? _pendingTexturePath;
 
         public static readonly int DefaultSlotWidth = BuffIconAtlas.IconWidth + 4;
         public static readonly int DefaultSlotHeight = BuffIconAtlas.IconHeight + 6;
@@ -123,7 +124,7 @@ namespace Client.Main.Controls.UI.Game.Buffs
 
             var spriteBatch = GraphicsManager.Instance.Sprite;
             var pixel = GraphicsManager.Instance.Pixel;
-            var font = GraphicsManager.Instance.Font;
+            var font = GraphicsManager.Instance.SmallFont ?? GraphicsManager.Instance.Font;
             if (spriteBatch == null || pixel == null || font == null)
                 return;
 
@@ -135,7 +136,7 @@ namespace Client.Main.Controls.UI.Game.Buffs
                 ? $"{name}\n{timeText}"
                 : $"{name}\n{_buff.ValueText}\n{timeText}";
 
-            float scale = 0.52f;
+            float scale = GraphicsManager.Instance.SmallFont != null ? 0.85f : 0.52f;
             Vector2 textSize = font.MeasureString(tooltip) * scale;
             int padding = 6;
             int tooltipWidth = (int)textSize.X + padding * 2;
@@ -231,21 +232,38 @@ namespace Client.Main.Controls.UI.Game.Buffs
         /// </summary>
         private static string FormatBuffTime(ActiveBuffState buff)
         {
+            bool zh = Localization.Loc.IsChinese;
             var remaining = buff.GetRemainingTime(DateTime.UtcNow);
             if (remaining.HasValue)
             {
                 var value = remaining.Value;
                 string approx = buff.DurationFromServer ? string.Empty : "~";
                 if (!buff.DurationFromServer && value <= TimeSpan.Zero)
-                    return "Ending soon";
-                return value.TotalSeconds < 60
-                    ? $"{approx}{Math.Ceiling(value.TotalSeconds)}s remaining"
+                    return zh ? "即将结束" : "Ending soon";
+                if (value.TotalHours >= 1)
+                    return zh
+                        ? $"剩余 {approx}{(int)value.TotalHours}小时{value.Minutes:00}分"
+                        : $"{approx}{(int)value.TotalHours}h {value.Minutes:00}m remaining";
+                if (value.TotalSeconds < 60)
+                    return zh
+                        ? $"剩余 {approx}{Math.Ceiling(value.TotalSeconds)}秒"
+                        : $"{approx}{Math.Ceiling(value.TotalSeconds)}s remaining";
+                return zh
+                    ? $"剩余 {approx}{(int)value.TotalMinutes}分{value.Seconds:00}秒"
                     : $"{approx}{(int)value.TotalMinutes}m {value.Seconds:00}s remaining";
             }
 
             var elapsed = DateTime.UtcNow - buff.ActivatedAt;
-            return elapsed.TotalSeconds < 60
-                ? $"{(int)elapsed.TotalSeconds}s active"
+            if (elapsed.TotalHours >= 1)
+                return zh
+                    ? $"已持续 {(int)elapsed.TotalHours}小时{elapsed.Minutes:00}分"
+                    : $"{(int)elapsed.TotalHours}h {elapsed.Minutes:00}m active";
+            if (elapsed.TotalSeconds < 60)
+                return zh
+                    ? $"已持续 {(int)elapsed.TotalSeconds}秒"
+                    : $"{(int)elapsed.TotalSeconds}s active";
+            return zh
+                ? $"已持续 {(int)elapsed.TotalMinutes}分"
                 : $"{(int)elapsed.TotalMinutes}m active";
         }
 
@@ -264,6 +282,7 @@ namespace Client.Main.Controls.UI.Game.Buffs
             {
                 1 => new Color(255, 60, 40),   // Greater Damage - red
                 2 => new Color(40, 200, 60),   // Greater Defense - green
+                3 => new Color(180, 95, 255),  // Elf Soldier - violet
                 4 => new Color(40, 80, 255),   // Soul Barrier - blue
                 8 => new Color(255, 200, 40),  // Swell Life - gold
                 5 => new Color(255, 150, 40),  // Critical Damage - orange
@@ -289,16 +308,43 @@ namespace Client.Main.Controls.UI.Game.Buffs
 
             if (_buff == null)
             {
+                _pendingTexturePath = null;
                 return;
             }
 
             if (!BuffIconAtlas.TryResolve(_buff.EffectId, out var frame))
             {
+                _pendingTexturePath = null;
                 return;
             }
 
-            _iconTexture = TextureLoader.Instance.GetTexture2D(frame.TexturePath);
             _iconSource = frame.SourceRectangle;
+            _iconTexture = TextureLoader.Instance.GetTexture2D(frame.TexturePath);
+
+            // Self-heal if TextureLoader evicted the buff atlas before the first buff arrived
+            if (_iconTexture == null && !string.Equals(_pendingTexturePath, frame.TexturePath, StringComparison.OrdinalIgnoreCase))
+            {
+                _pendingTexturePath = frame.TexturePath;
+                string pathToLoad = frame.TexturePath;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await TextureLoader.Instance.PrepareAndGetTexture(pathToLoad).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Retry on next draw if transient
+                    }
+                    finally
+                    {
+                        if (string.Equals(_pendingTexturePath, pathToLoad, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _pendingTexturePath = null;
+                        }
+                    }
+                });
+            }
         }
     }
 }

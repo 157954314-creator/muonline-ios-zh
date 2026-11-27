@@ -146,7 +146,7 @@ namespace Client.Main.Controls.UI.Game.Friends
             if (name.Length == 0) return;
             if (_friends.IsFriend(name))
             {
-                RequestDialog.ShowInfo($"{name} is already on your friend list.");
+                RequestDialog.ShowInfo($"{name} 已在你的好友列表中。");
                 return;
             }
             if (Service is { } service)
@@ -178,11 +178,11 @@ namespace Client.Main.Controls.UI.Game.Friends
             => (Scene as Scenes.GameScene)?.LetterRead?.Open(letter);
 
         private void ConfirmDelete(FriendEntry friend)
-            => RequestDialog.Show($"Remove {friend.Name} from your friend list?",
+            => RequestDialog.Show($"确定将 {friend.Name} 从好友列表中移除吗？",
                 onAccept: () => { if (Service is { } service) _ = service.SendFriendDeleteAsync(friend.Name); });
 
         private static void ConfirmDeleteLetter(LetterEntry letter)
-            => RequestDialog.Show($"Delete the letter \"{letter.Subject}\" from {letter.Sender}?",
+            => RequestDialog.Show($"确定删除来自 {letter.Sender} 的邮件“{letter.Subject}”吗？",
                 onAccept: () => { if (Service is { } service) _ = service.SendLetterDeleteRequestAsync(letter.Index); });
 
         // ─────────────────────────────── Update ───────────────────────────────

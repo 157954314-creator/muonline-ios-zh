@@ -187,6 +187,7 @@ namespace Client.Main.Scenes
             hotkeys.OnKeyPressed(Keys.D, ToggleCommandWindow, when: WhenNotUiInput);
             hotkeys.OnKeyPressed(Keys.Home, ToggleMuHelper, when: WhenNotUiInput);
             hotkeys.OnKeyPressed(Keys.Z, ToggleMuHelperWindow, when: WhenNotUiInput);
+            hotkeys.OnKeyPressed(Keys.F8, ToggleMonsterHealthBars, when: WhenNotUiInput);
             hotkeys.OnKeyPressed(Keys.Tab, ToggleMiniMap, when: WhenMiniMapToggle);
             hotkeys.OnKeyPressed(Keys.Enter, OpenChatInput, when: WhenNotUiInput);
         }
@@ -328,6 +329,13 @@ namespace Client.Main.Scenes
         private void ToggleMuHelperWindow(HotkeyContext context)
         {
             _scene.MuHelperWindow?.Toggle();
+        }
+
+        private void ToggleMonsterHealthBars(HotkeyContext context)
+        {
+            Helpers.OverheadNameplateRenderer.ShowMonsterOverheadBars = !Helpers.OverheadNameplateRenderer.ShowMonsterOverheadBars;
+            string status = Helpers.OverheadNameplateRenderer.ShowMonsterOverheadBars ? "已开启" : "已关闭";
+            _scene.ChatLog?.AddMessage("系统", $"[界面] 怪物头顶血条：{status}（F8 切换）", Models.MessageType.System);
         }
 
         private void ToggleMoveCommand(HotkeyContext context)

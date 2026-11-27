@@ -504,7 +504,7 @@ namespace Client.Main.Controls.UI.Game.Quest
 
             if (_font != null && _questData != null)
             {
-                string title = _questData.Title ?? "QUEST";
+                string title = _questData.Title ?? "任务";
                 float scale = FONT_SCALE_TITLE;
                 Vector2 size = _font.MeasureString(title) * scale;
                 Vector2 pos = new((ControlSize.X - size.X) / 2, (HEADER_HEIGHT - size.Y) / 2 + 3);
@@ -533,7 +533,7 @@ namespace Client.Main.Controls.UI.Game.Quest
             // NPC and state
             if (!string.IsNullOrEmpty(_questData.NpcName))
             {
-                DrawTextWithShadow(sb, $"NPC: {_questData.NpcName}", x, y, scale, Theme.TextGold);
+                DrawTextWithShadow(sb, $"任务发布人：{_questData.NpcName}", x, y, scale, Theme.TextGold);
                 y += lineHeight;
             }
 
@@ -546,7 +546,7 @@ namespace Client.Main.Controls.UI.Game.Quest
                     LegacyQuestState.Inactive => Theme.TextGray,
                     _ => Theme.TextDark
                 };
-                DrawTextWithShadow(sb, $"Status: {_questData.StateText}", x, y, scale, stateColor);
+                DrawTextWithShadow(sb, $"状态：{_questData.StateText}", x, y, scale, stateColor);
                 y += lineHeight + 4;
             }
 
@@ -563,7 +563,7 @@ namespace Client.Main.Controls.UI.Game.Quest
         private void DrawRequirementsSection(SpriteBatch sb)
         {
             DrawPanel(sb, _requirementsRect, Theme.BgMid);
-            DrawSectionHeader(sb, "REQUIREMENTS", _requirementsRect.X, _requirementsRect.Y + 2, _requirementsRect.Width);
+            DrawSectionHeader(sb, "任务条件", _requirementsRect.X, _requirementsRect.Y + 2, _requirementsRect.Width);
 
             if (_font == null || _questData?.Requirements == null) return;
 
@@ -603,7 +603,7 @@ namespace Client.Main.Controls.UI.Game.Quest
         private void DrawItemsSection(SpriteBatch sb)
         {
             DrawPanel(sb, _itemsRect, Theme.BgMid);
-            DrawSectionHeader(sb, "REQUIRED ITEMS", _itemsRect.X, _itemsRect.Y + 2, _itemsRect.Width);
+            DrawSectionHeader(sb, "所需物品", _itemsRect.X, _itemsRect.Y + 2, _itemsRect.Width);
 
             if (_font == null || _questData?.RequiredItems == null) return;
 
@@ -638,7 +638,7 @@ namespace Client.Main.Controls.UI.Game.Quest
             int valueX = _itemsRect.Right - 80;
             string countText = item.RequiredCount > 1
                 ? $"{item.CurrentCount} / {item.RequiredCount}"
-                : (item.IsMet ? "In Inventory" : "Missing");
+                : (item.IsMet ? "已拥有" : "缺少");
             DrawTextWithShadow(sb, countText, valueX, y, scale, item.IsMet ? Theme.Success : Theme.Danger);
         }
 
@@ -659,11 +659,11 @@ namespace Client.Main.Controls.UI.Game.Quest
 
         private void DrawDynamicContent(SpriteBatch sb)
         {
-            DrawButton(sb, Translate(_acceptButtonRect), _infoOnly ? "OK" : "Continue", _acceptHovered, Theme.AccentDim);
+            DrawButton(sb, Translate(_acceptButtonRect), _infoOnly ? "确定" : "继续", _acceptHovered, Theme.AccentDim);
 
             if (!_infoOnly && _rejectButtonRect.Width > 0)
             {
-                DrawButton(sb, Translate(_rejectButtonRect), "Close", _rejectHovered, Theme.SecondaryDim);
+                DrawButton(sb, Translate(_rejectButtonRect), "关闭", _rejectHovered, Theme.SecondaryDim);
             }
         }
 

@@ -140,7 +140,7 @@ namespace Client.Main.Controls.UI.Game
 
         private ChaosMixEvaluation _evaluation;
         private readonly List<string> _infoLines = new();
-        private string _warningLine = "Failure may destroy items.";
+        private string _warningLine = "合成失败可能导致物品消失。";
 
         private static readonly Dictionary<int, string> s_mixTypeNames = new();
 
@@ -489,7 +489,7 @@ namespace Client.Main.Controls.UI.Game
             if (pixel == null) return;
 
             DrawPanel(sb, _gridFrameRect, Theme.BgMid);
-            DrawSectionHeader(sb, "MIX BOX", _gridFrameRect.X, _gridFrameRect.Y + 2, _gridFrameRect.Width);
+            DrawSectionHeader(sb, "合成槽", _gridFrameRect.X, _gridFrameRect.Y + 2, _gridFrameRect.Width);
 
             sb.Draw(pixel, _gridRect, Theme.SlotBg);
 
@@ -589,7 +589,7 @@ namespace Client.Main.Controls.UI.Game
 
             if (_font == null) return;
 
-            string text = _mixInProgress ? "MIXING..." : "MIX";
+            string text = _mixInProgress ? "合成中..." : "开始合成";
             float scale = 0.45f;
             Vector2 size = _font.MeasureString(text) * scale;
             Vector2 pos = new(rect.X + (rect.Width - size.X) / 2, rect.Y + (rect.Height - size.Y) / 2);
@@ -801,7 +801,7 @@ namespace Client.Main.Controls.UI.Game
 
             if (_evaluation?.CurrentRecipe == null)
             {
-                RequestDialog.ShowInfo("Incorrect mix items.");
+                RequestDialog.ShowInfo("合成材料不正确。");
                 return;
             }
 
@@ -809,14 +809,14 @@ namespace Client.Main.Controls.UI.Game
             int chance = _evaluation.SuccessRate;
             uint cost = _evaluation.RequiredZen;
 
-            string message = $"Proceed with mix?\\nChance: {chance}%\\nCost: {FormatZen(cost)} Zen\\n\\nFailure may destroy items.";
+            string message = $"确定进行玛雅合成吗？\n成功率: {chance}%\n费用: {FormatZen(cost)} 金币\n\n合成失败可能导致物品消失。";
 
             RequestDialog.Show(
                 message,
                 onAccept: () => SendMixRequest(mixId),
                 onReject: null,
-                acceptText: "Mix",
-                rejectText: "Cancel");
+                acceptText: "合成",
+                rejectText: "取消");
         }
 
         private void SendMixRequest(int mixId)
@@ -848,16 +848,16 @@ namespace Client.Main.Controls.UI.Game
             _mixInProgress = false;
             string message = result switch
             {
-                ItemCraftingResult.CraftingResult.Success => "Mix succeeded.",
-                ItemCraftingResult.CraftingResult.Failed => "Mix failed.",
-                ItemCraftingResult.CraftingResult.NotEnoughMoney => "Not enough Zen.",
-                ItemCraftingResult.CraftingResult.TooManyItems => "Too many items in mix box.",
-                ItemCraftingResult.CraftingResult.CharacterLevelTooLow => "Character level too low.",
-                ItemCraftingResult.CraftingResult.LackingMixItems => "Missing required items.",
-                ItemCraftingResult.CraftingResult.IncorrectMixItems => "Incorrect mix items.",
-                ItemCraftingResult.CraftingResult.InvalidItemLevel => "Invalid item level.",
-                ItemCraftingResult.CraftingResult.CharacterClassTooLow => "Character class too low.",
-                _ => $"Mix result: {result}"
+                ItemCraftingResult.CraftingResult.Success => "合成成功！",
+                ItemCraftingResult.CraftingResult.Failed => "合成失败。",
+                ItemCraftingResult.CraftingResult.NotEnoughMoney => "金币不足。",
+                ItemCraftingResult.CraftingResult.TooManyItems => "合成槽物品过多。",
+                ItemCraftingResult.CraftingResult.CharacterLevelTooLow => "角色等级不足。",
+                ItemCraftingResult.CraftingResult.LackingMixItems => "缺少必需的合成材料。",
+                ItemCraftingResult.CraftingResult.IncorrectMixItems => "合成材料组合不正确。",
+                ItemCraftingResult.CraftingResult.InvalidItemLevel => "物品强化等级不符合要求。",
+                ItemCraftingResult.CraftingResult.CharacterClassTooLow => "角色职业阶位不足。",
+                _ => $"合成结果：{result}"
             };
 
             _warningLine = message;
@@ -907,11 +907,7 @@ namespace Client.Main.Controls.UI.Game
                 var def = ItemDatabase.GetItemDefinition(data)
                           ?? new ItemDefinition(0, ItemDatabase.GetItemName(data) ?? "Unknown Item", 1, 1, "Interface/newui_item_box.tga");
 
-                var item = new InventoryItem(def, new Point(gridX, gridY), data);
-                if (data.Length > 2)
-                {
-                    item.Durability = data[2];
-                }
+                var item = new InventoryItem(def, new Point(gridX, gridY), data, ItemDatabase.GetItemDurability(data));
 
                 _items.Add(item);
                 PlaceItemOnGrid(item, item.GridPosition);
@@ -934,17 +930,17 @@ namespace Client.Main.Controls.UI.Game
 
             if (recipe != null)
             {
-                _infoLines.Add($"Mix: {FormatMixType(recipe.MixId)}");
-                _infoLines.Add($"Chance: {_evaluation.SuccessRate}%");
-                _infoLines.Add($"Cost: {FormatZen(_evaluation.RequiredZen)} Zen");
+                _infoLines.Add($"配方：{FormatMixType(recipe.MixId)}");
+                _infoLines.Add($"成功率：{_evaluation.SuccessRate}%");
+                _infoLines.Add($"费用：{FormatZen(_evaluation.RequiredZen)} 金币");
                 _infoLines.Add(string.Empty);
             }
             else
             {
-                _infoLines.Add("Put items into the mix box.");
+                _infoLines.Add("请将材料放入合成槽。");
                 if (similar != null)
                 {
-                    _infoLines.Add($"Closest mix: {FormatMixType(similar.MixId)}");
+                    _infoLines.Add($"近似配方：{FormatMixType(similar.MixId)}");
                 }
                 _infoLines.Add(string.Empty);
             }
@@ -952,7 +948,7 @@ namespace Client.Main.Controls.UI.Game
             var showRecipe = recipe ?? similar;
             if (showRecipe != null)
             {
-                _infoLines.Add("Requirements:");
+                _infoLines.Add("所需材料：");
                 int count = Math.Clamp(showRecipe.NumSources, 0, showRecipe.Sources.Length);
                 for (int i = 0; i < count; i++)
                 {
@@ -966,7 +962,7 @@ namespace Client.Main.Controls.UI.Game
                 }
             }
 
-            _warningLine = "Failure may destroy items.";
+            _warningLine = "合成失败可能导致物品消失。";
         }
 
         private static string FormatZen(uint value)
@@ -1078,44 +1074,44 @@ namespace Client.Main.Controls.UI.Game
 
             if (src.SpecialItem.HasFlag(MixSpecialItem.Add380Item))
             {
-                baseName = "380+ Item";
+                baseName = "380级装备";
             }
             else if (src.TypeMin == 0 && (src.TypeMax == ItemType(11, 511) || src.TypeMax == ItemType(13, 511)))
             {
-                baseName = "Item";
+                baseName = "任意装备";
             }
             else if (src.TypeMin == 0 && src.TypeMax == ItemType(5, 511))
             {
-                baseName = "Weapon";
+                baseName = "武器";
             }
             else if (src.TypeMin == ItemType(6, 0) && src.TypeMax == ItemType(11, 511))
             {
-                baseName = "Armor";
+                baseName = "防具";
             }
             else if (src.TypeMin == ItemType(12, 0) && src.TypeMax == ItemType(12, 2))
             {
-                baseName = "Wings (1st)";
+                baseName = "一代翅膀";
             }
             else if (src.TypeMin == ItemType(12, 3) && src.TypeMax == ItemType(12, 6))
             {
-                baseName = "Wings (2nd)";
+                baseName = "二代翅膀";
             }
             else if (src.TypeMin == ItemType(12, 60) && src.TypeMax == ItemType(12, 65))
             {
-                baseName = "Seeds";
+                baseName = "荧光宝石";
             }
             else if (src.TypeMin == ItemType(12, 70) && src.TypeMax == ItemType(12, 74))
             {
-                baseName = "Spheres";
+                baseName = "光之石";
             }
             else if ((src.TypeMin == ItemType(12, 100) && src.TypeMax == ItemType(12, 128)) ||
                      (src.TypeMin == ItemType(12, 101) && src.TypeMax == ItemType(12, 129)))
             {
-                baseName = "Seed Spheres";
+                baseName = "荧光光之石";
             }
             else if (src.TypeMin == src.TypeMax)
             {
-                baseName = GetNameFromType(src.TypeMin) ?? $"Type {src.TypeMin}";
+                baseName = GetNameFromType(src.TypeMin) ?? $"物品 {src.TypeMin}";
             }
             else
             {
@@ -1124,22 +1120,22 @@ namespace Client.Main.Controls.UI.Game
 
             if (src.SpecialItem.HasFlag(MixSpecialItem.SocketItem))
             {
-                baseName = $"Socket {baseName}";
+                baseName = $"镶嵌 {baseName}";
             }
 
             if (src.SpecialItem.HasFlag(MixSpecialItem.Harmony))
             {
-                baseName = $"Harmony {baseName}";
+                baseName = $"再生 {baseName}";
             }
 
             if (src.SpecialItem.HasFlag(MixSpecialItem.SetItem))
             {
-                baseName = $"Ancient {baseName}";
+                baseName = $"套装 {baseName}";
             }
 
             if (src.SpecialItem.HasFlag(MixSpecialItem.Excellent))
             {
-                baseName = $"Excellent {baseName}";
+                baseName = $"卓越 {baseName}";
             }
 
             if (!IsWildcard(src.DurabilityMin, src.DurabilityMax) && src.DurabilityMin == src.DurabilityMax)
@@ -1155,11 +1151,11 @@ namespace Client.Main.Controls.UI.Game
                 }
                 else if (src.LevelMin == 0)
                 {
-                    baseName = $"{baseName} +{src.LevelMax} or less";
+                    baseName = $"{baseName} +{src.LevelMax}及以下";
                 }
                 else if (src.LevelMax == 255)
                 {
-                    baseName = $"{baseName} +{src.LevelMin} or more";
+                    baseName = $"{baseName} +{src.LevelMin}及以上";
                 }
                 else
                 {
@@ -1171,24 +1167,24 @@ namespace Client.Main.Controls.UI.Game
             {
                 if (src.OptionMin == src.OptionMax)
                 {
-                    baseName = $"{baseName} opt +{src.OptionMin}";
+                    baseName = $"{baseName} 追+{src.OptionMin}";
                 }
                 else if (src.OptionMin == 0)
                 {
-                    baseName = $"{baseName} opt +{src.OptionMax} or less";
+                    baseName = $"{baseName} 追+{src.OptionMax}及以下";
                 }
                 else if (src.OptionMax == 255)
                 {
-                    baseName = $"{baseName} opt +{src.OptionMin} or more";
+                    baseName = $"{baseName} 追+{src.OptionMin}及以上";
                 }
                 else
                 {
-                    baseName = $"{baseName} opt +{src.OptionMin}~{src.OptionMax}";
+                    baseName = $"{baseName} 追+{src.OptionMin}~{src.OptionMax}";
                 }
             }
 
             string countPart = src.CountMin == 0 && src.CountMax == 255
-                ? "(Optional)"
+                ? "(可选)"
                 : src.CountMin == src.CountMax
                     ? $"x{src.CountMin}"
                     : src.CountMin == 0
@@ -1521,26 +1517,26 @@ namespace Client.Main.Controls.UI.Game
         {
             if (_mixInProgress)
             {
-                blockReason = "Mix is in progress. Please wait for the result.";
+                blockReason = "正在合成中，请等待结果。";
                 return false;
             }
 
             if (_draggedItem != null)
             {
-                blockReason = "Place the picked item back before closing.";
+                blockReason = "请先放回手持的物品再关闭窗口。";
                 return false;
             }
 
             var externalDragged = InventoryControl.Instance?.GetDraggedItem();
             if (externalDragged != null)
             {
-                blockReason = "Finish moving the item before closing.";
+                blockReason = "请先完成物品移动再关闭窗口。";
                 return false;
             }
 
             if (_items.Count > 0)
             {
-                blockReason = "Remove all items from the Chaos Mix box before closing.";
+                blockReason = "请先取出合成槽内的所有物品再关闭。";
                 return false;
             }
 

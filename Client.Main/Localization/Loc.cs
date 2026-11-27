@@ -52,44 +52,53 @@ namespace Client.Main.Localization
             ["Elbeland"] = "幻术园",
             ["Elbeland2"] = "幻术园2",
             ["Elbeland3"] = "幻术园3",
+            ["Elveland"] = "幻术园",
+            ["Elveland2"] = "幻术园2",
+            ["Elveland3"] = "幻术园3",
             ["Aida"] = "幽暗森林",
             ["Aida1"] = "幽暗森林1",
             ["Aida2"] = "幽暗森林2",
             ["Crywolf"] = "狼魂要塞",
+            ["CrywolfFortress"] = "狼魂要塞",
             ["Kanturu"] = "坎特鲁废墟",
             ["Kanturu1"] = "坎特鲁废墟1",
             ["Kanturu2"] = "坎特鲁废墟2",
             ["Kanturu3"] = "坎特鲁废墟3",
+            ["KanturuRuin1"] = "坎特鲁废墟1",
+            ["KanturuRuin2"] = "坎特鲁废墟2",
+            ["KanturuRuin3"] = "坎特鲁废墟3",
+            ["KanturuRuins1"] = "坎特鲁废墟1",
+            ["KanturuRuins2"] = "坎特鲁废墟2",
+            ["KanturuRuins3"] = "坎特鲁废墟3",
+            ["KanturuRelic"] = "坎特鲁遗址",
             ["KanturuRelics"] = "坎特鲁遗址",
             ["KanturuRemain"] = "坎特鲁遗址",
-            ["Kanturu_ruin1"] = "坎特鲁废墟1",
-            ["Kanturu_ruin2"] = "坎特鲁废墟2",
-            ["Kanturu_ruin3"] = "坎特鲁废墟3",
-            ["Kanturu_ruin_island"] = "坎特鲁废墟岛",
-            ["Swamp of Calmness"] = "安宁池",
+            ["KanturuRuinIsland"] = "坎特鲁废墟岛",
+            ["KanturuRuinsIsland"] = "坎特鲁废墟岛",
             ["SwampOfCalmness"] = "安宁池",
+            ["PeaceSwamp"] = "安宁池",
+            ["SwampOfPeace"] = "安宁池",
             ["Calmness"] = "安宁池",
             ["LaCleon"] = "冰霜之城",
+            ["LaCleon2"] = "冰霜之城2",
             ["Raklion"] = "冰霜之城",
+            ["Raklion2"] = "冰霜之城2",
             ["Vulcanus"] = "火山",
             ["Karutan1"] = "卡伦特1",
             ["Karutan2"] = "卡伦特2",
             ["LorenMarket"] = "罗兰市场",
-            ["Valley of Loren"] = "罗兰峡谷",
             ["ValleyOfLoren"] = "罗兰峡谷",
             ["LorenDeep"] = "罗兰峡谷",
-            ["Land of Trials"] = "魔炼之地",
             ["LandOfTrials"] = "魔炼之地",
-            ["Balgass Barracks"] = "巴卡斯兵营",
+            ["BalgassBarracks"] = "巴卡斯兵营",
+            ["BarracksOfBalgass"] = "巴卡斯兵营",
             ["Barracks"] = "巴卡斯兵营",
+            ["BalgassRefuge"] = "巴卡斯休息室",
+            ["RefugeOfBalgass"] = "巴卡斯休息室",
             ["Refuge"] = "巴卡斯休息室",
-            ["Blood Castle"] = "血色城堡",
             ["BloodCastle"] = "血色城堡",
-            ["Devil Square"] = "恶魔广场",
             ["DevilSquare"] = "恶魔广场",
-            ["Chaos Castle"] = "赤色要塞",
             ["ChaosCastle"] = "赤色要塞",
-            ["Illusion Temple"] = "幻影寺院",
             ["IllusionTemple"] = "幻影寺院",
             ["Kalima"] = "卡利玛",
             ["Kalima1"] = "卡利玛1",
@@ -99,8 +108,15 @@ namespace Client.Main.Localization
             ["Kalima5"] = "卡利玛5",
             ["Kalima6"] = "卡利玛6",
             ["Kalima7"] = "卡利玛7",
-            ["Santa Village"] = "圣诞之地",
-            ["Silent Map"] = "寂静之地",
+            ["SantaVillage"] = "圣诞之地",
+            ["SilentMap"] = "寂静之地",
+            ["Acheron"] = "阿卡伦",
+            ["Debenter"] = "德班泰尔",
+            ["UrukMountain"] = "乌鲁克山脉",
+            ["Nars"] = "纳尔斯",
+            ["Ferea"] = "菲利亚",
+            ["NixiesLake"] = "尼克西斯湖",
+            ["SwampOfDarkness"] = "黑暗沼泽",
         };
 
         private static Dictionary<string, string> LoadEmbeddedDict(string fileName)
@@ -178,10 +194,32 @@ namespace Client.Main.Localization
             var trimmed = name.Trim();
             if (_maps.TryGetValue(trimmed, out var zh))
                 return zh;
-            // Try removing spaces
-            var compact = trimmed.Replace(" ", string.Empty);
+            // Try removing spaces, underscores, and trailing punctuation (e.g. "Kanturu ruin 1", "Silent Map?")
+            var compact = trimmed.Replace(" ", string.Empty).Replace("_", string.Empty).Replace("?", string.Empty);
             if (_maps.TryGetValue(compact, out zh))
                 return zh;
+
+            // Numbered event maps: Blood Castle 1..8, Devil Square 1..7, Chaos Castle 1..7, Illusion Temple 1..6
+            if (trimmed.StartsWith("Blood Castle", StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = trimmed.Substring("Blood Castle".Length).Trim().Replace("(Master Level)", "(大师)");
+                return string.IsNullOrEmpty(suffix) ? "血色城堡" : $"血色城堡 {suffix}";
+            }
+            if (trimmed.StartsWith("Devil Square", StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = trimmed.Substring("Devil Square".Length).Trim().Replace("(Master Level)", "(大师)");
+                return string.IsNullOrEmpty(suffix) ? "恶魔广场" : $"恶魔广场 {suffix}";
+            }
+            if (trimmed.StartsWith("Chaos Castle", StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = trimmed.Substring("Chaos Castle".Length).Trim().Replace("(Master Level)", "(大师)");
+                return string.IsNullOrEmpty(suffix) ? "赤色要塞" : $"赤色要塞 {suffix}";
+            }
+            if (trimmed.StartsWith("Illusion Temple", StringComparison.OrdinalIgnoreCase))
+            {
+                var suffix = trimmed.Substring("Illusion Temple".Length).Trim().Replace("(Master Level)", "(大师)");
+                return string.IsNullOrEmpty(suffix) ? "幻影寺院" : $"幻影寺院 {suffix}";
+            }
             return name;
         }
 

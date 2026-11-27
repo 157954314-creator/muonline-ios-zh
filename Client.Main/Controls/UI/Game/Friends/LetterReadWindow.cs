@@ -99,7 +99,7 @@ namespace Client.Main.Controls.UI.Game.Friends
         private void Delete()
         {
             if (_letter is not { } letter) return;
-            RequestDialog.Show($"Delete the letter \"{letter.Subject}\"?", onAccept: () =>
+            RequestDialog.Show($"确定删除邮件“{letter.Subject}”吗？", onAccept: () =>
             {
                 if (MuGame.Network?.GetCharacterService() is { } service) _ = service.SendLetterDeleteRequestAsync(letter.Index);
             });

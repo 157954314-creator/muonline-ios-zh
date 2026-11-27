@@ -405,13 +405,13 @@ namespace Client.Main.Controls.UI.Game.Hud
                 return;
             }
 
-            string name = _hoveredEntry.Definition.Name ?? $"Item {_hoveredEntry.Definition.Group}/{_hoveredEntry.Definition.Id}";
-            string durabilityLine = $"Durability: {_hoveredEntry.Durability}/{_hoveredEntry.MaxDurability}";
+            string name = _hoveredEntry.Definition.Name ?? $"物品 {_hoveredEntry.Definition.Group}/{_hoveredEntry.Definition.Id}";
+            string durabilityLine = $"耐久度: {_hoveredEntry.Durability}/{_hoveredEntry.MaxDurability}";
             string stateLine = _hoveredEntry.Severity switch
             {
-                WarningSeverity.Warning => "State: Worn",
-                WarningSeverity.Serious => "State: Damaged",
-                _ => "State: Critical"
+                WarningSeverity.Warning => "状态: 磨损",
+                WarningSeverity.Serious => "状态: 破损",
+                _ => "状态: 即将损毁"
             };
 
             string[] lines = { name, durabilityLine, stateLine };
@@ -481,18 +481,20 @@ namespace Client.Main.Controls.UI.Game.Hud
                 return BmdPreviewRenderer.TryGetCachedPreview(definition, IconPreviewCacheSize, IconPreviewCacheSize);
             }
 
-            if (_iconTextureCache.TryGetValue(definition.TexturePath, out var cached))
+            if (_iconTextureCache.TryGetValue(definition.TexturePath, out var cached) && cached != null && !cached.IsDisposed)
             {
                 return cached;
             }
 
             var texture = TextureLoader.Instance.GetTexture2D(definition.TexturePath);
-            if (texture != null)
+            if (texture != null && !texture.IsDisposed)
             {
                 _iconTextureCache[definition.TexturePath] = texture;
+                return texture;
             }
 
-            return texture;
+            _ = TextureLoader.Instance.Prepare(definition.TexturePath);
+            return null;
         }
 
         private static WarningSeverity ResolveSeverity(int durability, int maxDurability)

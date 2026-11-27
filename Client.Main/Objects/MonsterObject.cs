@@ -371,26 +371,24 @@ namespace Client.Main.Objects
             if (IsDead || !Visible)
                 return;
 
-            // Show monster labels only when hovered or when HP bar is available.
-            // This matches expected clutter reduction while still keeping combat readability.
-            bool showByHover = Constants.SHOW_NAMES_ON_HOVER && IsMouseHover;
-            bool showByHealth = _hasHealthFraction;
-            if (!showByHover && !showByHealth)
-                return;
-
-            var font = GraphicsManager.Instance.Font;
-            if (font == null)
-                return;
-
             string name = DisplayName;
             if (string.IsNullOrWhiteSpace(name))
                 return;
 
-            if (!OverheadNameplateRenderer.TryProject(BoundingBoxWorld, NameplateHeightOffset, out var screen))
-                return;
-
+            // S6-style monster display:
+            // 1. Hovered monster shows the classic top-center crimson name banner + 20-segment HP bar.
+            // 2. Overhead shows only a compact 8-segment red HP bar (F8 toggleable, or when damaged) with no giant black name box.
             float? hp = _hasHealthFraction ? _healthFraction : null;
-            OverheadNameplateRenderer.EnqueueNameplate(font, screen, name, hp, Constants.RENDER_SCALE);
+            if (IsMouseHover)
+            {
+                OverheadNameplateRenderer.EnqueueMonsterTopBanner(name, hp, Constants.RENDER_SCALE);
+            }
+
+            bool showBar = OverheadNameplateRenderer.ShowMonsterOverheadBars || (_hasHealthFraction && _healthFraction < 0.999f);
+            if (showBar && OverheadNameplateRenderer.TryProject(BoundingBoxWorld, NameplateHeightOffset, out var screen))
+            {
+                OverheadNameplateRenderer.EnqueueMonsterOverheadBar(screen, hp ?? 1f, Constants.RENDER_SCALE);
+            }
         }
 
         /// <summary>

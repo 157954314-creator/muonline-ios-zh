@@ -190,9 +190,9 @@ namespace MuAndroid
             Constants.ENABLE_MONSTER_MATERIAL_SHADER = true;
             Constants.ENABLE_WEAPON_TRAIL = false;
             Constants.HIGH_QUALITY_TEXTURES = false;
-            Constants.RENDER_SCALE = 0.75f;
+            Constants.RENDER_SCALE = 0.85f;
             Constants.DYNAMIC_LIGHT_UPDATE_FPS = 30;
-            Constants.FOV_SCALE = 0.8f;
+            Constants.FOV_SCALE = 0.85f;
         }
 
         protected override void OnCreate(Bundle bundle)
@@ -200,6 +200,8 @@ namespace MuAndroid
             base.OnCreate(bundle);
             MuGame.PlatformLoggerProvider = new AndroidLogcatLoggerProvider();
             Constants.SETTINGS_PATH = EnsureAndroidConfig();
+            string dataRoot = GetExternalFilesDir(null)?.AbsolutePath ?? FilesDir!.AbsolutePath;
+            Constants.DataPath = Path.Combine(dataRoot, "Data");
             TextFieldControl.ControlType = typeof(AndroidTextFieldControl);
 
             ApplyAndroidDefaults();
@@ -255,8 +257,9 @@ namespace MuAndroid
                               $"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
                               $"Android Version: {Build.VERSION.SdkInt}\n" +
                               $"Device: {Build.Manufacturer} {Build.Model}\n" +
-                              $"Screen: {ScreenWidth}x{ScreenHeight}\n";
-                SaveCrashLog(startMsg);
+                              $"Screen: {ScreenWidth}x{ScreenHeight}\n" +
+                              $"DataPath: {Client.Main.Constants.DataPath}\n";
+                Android.Util.Log.Info("MuAndroid", startMsg);
 
                 _game = new Client.Main.MuGame();
 

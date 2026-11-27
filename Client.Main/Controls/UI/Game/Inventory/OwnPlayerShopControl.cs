@@ -175,19 +175,19 @@ namespace Client.Main.Controls.UI.Game.Inventory
             }
             if (fromSlot < 12)
             {
-                RequestDialog.ShowInfo("Unequip the item before putting it in your shop.");
+                RequestDialog.ShowInfo("请先卸下装备再上架到个人商店。");
                 return;
             }
             if (fromSlot >= FirstSlot)
             {
-                RequestDialog.ShowInfo("This item cannot be placed in the shop.");
+                RequestDialog.ShowInfo("该物品无法上架到个人商店。");
                 return;
             }
 
             int width = item.Definition.Width, height = item.Definition.Height;
             if (!CanPlace(cell.X, cell.Y, width, height) && !TryFindFreeCell(width, height, out cell))
             {
-                RequestDialog.ShowInfo("There is no room for this item in your shop.");
+                RequestDialog.ShowInfo("个人商店空间不足。");
                 return;
             }
 
@@ -196,8 +196,8 @@ namespace Client.Main.Controls.UI.Game.Inventory
 
         private bool CanEditItems(out string? reason)
         {
-            reason = _state.IsPlayerShopOpen ? "Close your shop before changing its items or prices."
-                   : IsBusy ? "Please wait until the previous item operation is confirmed."
+            reason = _state.IsPlayerShopOpen ? "请先关闭个人商店再调整物品或价格。"
+                   : IsBusy ? "请等待上一个物品操作完成。"
                    : null;
             return reason == null;
         }
@@ -313,7 +313,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
                 !CanPlace(cell.X, cell.Y, request.Item.Definition.Width, request.Item.Definition.Height))
             {
                 CancelPricing();
-                RequestDialog.ShowInfo("That shop position is no longer free.");
+                RequestDialog.ShowInfo("该商店格子已被占用。");
                 return;
             }
 
@@ -348,7 +348,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
         {
             if (!_state.TryBeginPlayerShopPrice(fromSlot, toSlot, price))
             {
-                RequestDialog.ShowInfo("Another item operation is pending or this item is unavailable.");
+                RequestDialog.ShowInfo("有其他物品操作正在进行，或该物品不可用。");
                 return;
             }
             _pendingItem = rawData;
@@ -366,18 +366,18 @@ namespace Client.Main.Controls.UI.Game.Inventory
                 if (!success || expected == null || _state.IsPlayerShopOpen ||
                     !_state.GetInventoryItems().TryGetValue(from, out var current) || !current.SequenceEqual(expected))
                 {
-                    RequestDialog.ShowInfo("The item price was not confirmed or the item changed. Nothing was moved.");
+                    RequestDialog.ShowInfo("物品定价未确认或物品已变动，未移动物品。");
                     return;
                 }
                 if (from == to)
                 {
                     _prices[to] = price;
-                    SetStatus($"Price set to {PlayerShopUi.FormatZen(price)} Zen.", ModernHudTheme.Success);
+                    SetStatus($"已定价为 {PlayerShopUi.FormatZen(price)} 金币。", ModernHudTheme.Success);
                     return;
                 }
                 if (!_state.TryBeginPlayerShopMove(from, to))
                 {
-                    RequestDialog.ShowInfo("Another item operation is pending. Nothing was moved.");
+                    RequestDialog.ShowInfo("有其他物品操作正在进行，未移动物品。");
                     return;
                 }
                 _movingPrice = price;
@@ -386,7 +386,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
                 {
                     _state.TryFinishPlayerShopMove(to, out _);
                     _movingPrice = 0;
-                    RequestDialog.ShowInfo("Could not send the item move.");
+                    RequestDialog.ShowInfo("发送物品移动请求失败。");
                 }
             });
         }
@@ -398,12 +398,12 @@ namespace Client.Main.Controls.UI.Game.Inventory
                 if (success && PlayerShopUi.IsShopSlot(to) && _movingPrice > 0)
                 {
                     _prices[to] = _movingPrice;
-                    SetStatus($"Item added for {PlayerShopUi.FormatZen(_movingPrice)} Zen.", ModernHudTheme.Success);
+                    SetStatus($"已上架，定价 {PlayerShopUi.FormatZen(_movingPrice)} 金币。", ModernHudTheme.Success);
                 }
                 if (success && PlayerShopUi.IsShopSlot(from))
                 {
                     _prices.Remove(from);
-                    if (!PlayerShopUi.IsShopSlot(to)) SetStatus("Item returned to your inventory.", ModernHudTheme.TextWhite);
+                    if (!PlayerShopUi.IsShopSlot(to)) SetStatus("物品已退回背包。", ModernHudTheme.TextWhite);
                 }
                 _movingPrice = 0;
             });
@@ -458,7 +458,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
                 int index = entry.Key - 12;
                 if (index < 0 || index >= columns * rows) continue;
                 var existing = ItemDatabase.GetItemDefinition(entry.Value);
-                if (existing == null) { RequestDialog.ShowInfo("Cannot determine free inventory space."); return; }
+                if (existing == null) { RequestDialog.ShowInfo("无法判断背包剩余空间。"); return; }
                 int startX = index % columns, startY = index / columns;
                 for (int y = startY; y < Math.Min(rows, startY + existing.Height); y++)
                     for (int x = startX; x < Math.Min(columns, startX + existing.Width); x++) occupied[x, y] = true;
@@ -476,11 +476,11 @@ namespace Client.Main.Controls.UI.Game.Inventory
                 if (service == null || !await service.SendPlayerShopMoveAsync(fromSlot, toSlot))
                 {
                     _state.TryFinishPlayerShopMove(toSlot, out _);
-                    RequestDialog.ShowInfo("Could not send the item move.");
+                    RequestDialog.ShowInfo("发送物品移动请求失败。");
                 }
                 return;
             }
-            RequestDialog.ShowInfo("There is not enough room in your inventory.");
+            RequestDialog.ShowInfo("背包剩余空间不足。");
         }
 
         // ─────────────────────────────── Update ───────────────────────────────

@@ -436,19 +436,19 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     var scene = MuGame.Instance?.ActiveScene as GameScene;
                     string msg = res.Result switch
                     {
-                        ItemCraftingResult.CraftingResult.Success => "Mix succeeded.",
-                        ItemCraftingResult.CraftingResult.Failed => "Mix failed.",
-                        ItemCraftingResult.CraftingResult.NotEnoughMoney => "Not enough Zen.",
-                        ItemCraftingResult.CraftingResult.TooManyItems => "Too many items in mix box.",
-                        ItemCraftingResult.CraftingResult.CharacterLevelTooLow => "Character level too low.",
-                        ItemCraftingResult.CraftingResult.LackingMixItems => "Missing required items.",
-                        ItemCraftingResult.CraftingResult.IncorrectMixItems => "Incorrect mix items.",
-                        ItemCraftingResult.CraftingResult.InvalidItemLevel => "Invalid item level.",
-                        ItemCraftingResult.CraftingResult.CharacterClassTooLow => "Character class too low.",
-                        _ => $"Mix result: {res.Result}"
+                        ItemCraftingResult.CraftingResult.Success => "合成成功。",
+                        ItemCraftingResult.CraftingResult.Failed => "合成失败。",
+                        ItemCraftingResult.CraftingResult.NotEnoughMoney => "金币不足。",
+                        ItemCraftingResult.CraftingResult.TooManyItems => "合成栏物品过多。",
+                        ItemCraftingResult.CraftingResult.CharacterLevelTooLow => "角色等级不足。",
+                        ItemCraftingResult.CraftingResult.LackingMixItems => "缺少合成所需材料。",
+                        ItemCraftingResult.CraftingResult.IncorrectMixItems => "合成材料组合不正确。",
+                        ItemCraftingResult.CraftingResult.InvalidItemLevel => "物品等级不符合要求。",
+                        ItemCraftingResult.CraftingResult.CharacterClassTooLow => "当前职业无法合成。",
+                        _ => $"合成结果：{res.Result}"
                     };
 
-                    scene?.ChatLog?.AddMessage("System", msg, Client.Main.Models.MessageType.System);
+                    scene?.ChatLog?.AddMessage("系统", msg, Client.Main.Models.MessageType.System);
                 });
             }
             catch (Exception ex)
@@ -462,25 +462,26 @@ namespace Client.Main.Networking.PacketHandling.Handlers
         /// <summary>
         /// Handle 0x32 (Buy) results. For this family, some packets have no subcode (ItemBought),
         /// and failure (NpcItemBuyFailed) is a short 4-byte packet which some servers send with subcode.
-        /// We treat all 0x32 as 'no subcode' in the router and differentiate by length here.
+        /// Note: OpenMU also sends 0x32 FF (without a blue error message) after stacking a bought consumable
+        /// onto an existing inventory stack (0x2A durability update already applied), so only show an error
+        /// popup when the server actually sent a failure message.
         /// </summary>
         [PacketHandler(0x32, PacketRouter.NoSubCode)]
         public Task HandleNpcBuyResultsAsync(Memory<byte> packet)
         {
             try
             {
-                // Failure case: C1 04 32 FF (len = 4)
+                // Failure or stack-merge acknowledgement: C1 04 32 FF (len = 4)
                 if (packet.Length == NpcItemBuyFailed.Length)
                 {
-                    _logger.LogWarning("NPC item buy failed. Packet len={Len}", packet.Length);
+                    _logger.LogDebug("NPC item buy 0x32 FF received (failure or stack merge).");
                     MuGame.ScheduleOnMainThread(() =>
                     {
                         string reason = ChatMessageHandler.TryGetRecentBlueSystemMessage(2000);
-                        if (string.IsNullOrWhiteSpace(reason))
+                        if (!string.IsNullOrWhiteSpace(reason))
                         {
-                            reason = "Purchase failed. Please check Zen or space.";
+                            RequestDialog.ShowInfo(reason);
                         }
-                        RequestDialog.ShowInfo(reason);
                     });
                     return Task.CompletedTask;
                 }

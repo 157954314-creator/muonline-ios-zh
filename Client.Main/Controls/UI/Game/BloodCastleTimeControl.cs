@@ -107,7 +107,7 @@ namespace Client.Main.Controls.UI.Game
             // Chaos Castle: remaining monsters and players plus the collapse stage (NewUIChaosCastleTime).
             if (_chaosCastleMode)
             {
-                string remainText = $"Remaining: {_killedMonsters}";
+                string remainText = $"剩余目标：{_killedMonsters}";
                 Vector2 remainSize = _font.MeasureString(remainText) * scale;
                 DrawTextWithShadow(sb, _font, remainText, rect.X + (rect.Width - remainSize.X) / 2f, y, scale, Theme.TextNormal);
                 y += _font.LineSpacing * scale + 4;
@@ -115,7 +115,7 @@ namespace Client.Main.Controls.UI.Game
             // Monster count (if set)
             else if (_maxMonsters != 65535)
             {
-                string monsterText = $"Monsters: {_killedMonsters} / {_maxMonsters}";
+                string monsterText = $"击杀怪物：{_killedMonsters} / {_maxMonsters}";
                 Vector2 monsterSize = _font.MeasureString(monsterText) * scale;
                 float monsterX = rect.X + (rect.Width - monsterSize.X) / 2f;
                 DrawTextWithShadow(sb, _font, monsterText, monsterX, y, scale, Theme.TextNormal);
@@ -123,7 +123,7 @@ namespace Client.Main.Controls.UI.Game
             }
 
             // "Remaining Time" label
-            string label = "Remaining Time";
+            string label = "剩余时间";
             Vector2 labelSize = _font.MeasureString(label) * scale;
             float labelX = rect.X + (rect.Width - labelSize.X) / 2f;
             DrawTextWithShadow(sb, _font, label, labelX, y, scale, Theme.TextWhite);

@@ -75,7 +75,8 @@ namespace Client.Main.Graphics
                 (int)(size.Y) + padY * 2);
 
             DrawSimpleBackground(sb, gd, rect, bgColor, layer);
-            sb.DrawString(font, text, new Vector2(rect.X + padX, rect.Y + padY), textColor, 0f, Vector2.Zero, scale, SpriteEffects.None, layer);
+            float opticalY = Localization.Loc.IsChinese ? -size.Y * 0.09f : 0f;
+            sb.DrawString(font, text, new Vector2(rect.X + padX, rect.Y + padY + opticalY), textColor, 0f, Vector2.Zero, scale, SpriteEffects.None, layer);
         }
     }
 }

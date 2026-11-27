@@ -135,10 +135,10 @@ namespace Client.Main.Controls.UI.Game
 
         private static readonly string[] InstructionLines =
         {
-            "Enter with an Invisibility Cloak ticket matching your gate level.",
-            "Only the highlighted gate matches your level.",
-            "Each gate corresponds to a specific level range.",
-            "Special classes (Dark Lord, Dark, Rage Fighter) have different level requirements."
+            "需携带对应层级的透明披风方可进入血色城堡。",
+            "仅高亮显示的入口符合你当前的等级范围。",
+            "每个入口对应不同的等级区间。",
+            "魔剑士、圣导师、格斗家拥有专属等级区间。"
         };
 
         private BloodCastleEnterControl()
@@ -362,7 +362,7 @@ namespace Client.Main.Controls.UI.Game
 
         private void DrawHeaderTitle(SpriteBatch sb)
         {
-            string title = "BLOOD CASTLE";
+            string title = "血色城堡";
             float scale = FONT_SCALE_TITLE;
             Vector2 size = _font.MeasureString(title) * scale;
             Vector2 pos = new((ControlSize.X - size.X) / 2f, (_headerRect.Height - size.Y) / 2f + 4);
@@ -451,7 +451,7 @@ namespace Client.Main.Controls.UI.Game
 
                 if (isActive)
                 {
-                    string actionText = _hasMatchingTicket ? "ENTER" : "TICKET";
+                    string actionText = _hasMatchingTicket ? "进入" : "需门票";
                     Color actionColor = _hasMatchingTicket ? Theme.Success : Theme.Warning;
                     Vector2 actionSize = _font.MeasureString(actionText) * FONT_SCALE_SMALL;
                     float actionX = rowRect.Right - actionSize.X - 12;
@@ -463,23 +463,23 @@ namespace Client.Main.Controls.UI.Game
 
         private void DrawFooterStatus(SpriteBatch sb)
         {
-            string gateText = $"Active Gate: Blood Castle {_activeIndex + 1}";
+            string gateText = $"当前匹配入口：血色城堡 {_activeIndex + 1} 层";
             string statusText;
             Color statusColor;
 
             if (_hasMatchingTicket)
             {
-                statusText = $"Ticket OK: Blood Castle {_expectedTicketLevel}";
+                statusText = $"门票就绪：透明披风 +{_expectedTicketLevel}";
                 statusColor = Theme.Success;
             }
             else if (_hasAnyTicket)
             {
-                statusText = $"Ticket mismatch: need BC{_expectedTicketLevel}, have BC{_foundTicketLevel}";
+                statusText = $"门票不匹配：需要 +{_expectedTicketLevel}，当前背包为 +{_foundTicketLevel}";
                 statusColor = Theme.Warning;
             }
             else
             {
-                statusText = "Invisibility Cloak required to enter.";
+                statusText = "进入需要携带对应等级的透明披风。";
                 statusColor = Theme.Danger;
             }
 
@@ -653,10 +653,10 @@ namespace Client.Main.Controls.UI.Game
 
             for (int i = 0; i < ENTRY_COUNT; i++)
             {
-                _entryLabels[i] = $"Blood Castle {i + 1}";
+                _entryLabels[i] = $"血色城堡 {i + 1} 层";
                 if (i == ENTRY_COUNT - 1)
                 {
-                    _entryRanges[i] = "Master Level";
+                    _entryRanges[i] = "大师等级";
                 }
                 else
                 {

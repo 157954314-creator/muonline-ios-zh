@@ -125,10 +125,10 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                             {
                                 string text = playState switch
                                 {
-                                    5 => "Chaos Castle has started! Defeat every monster and player.",
-                                    8 => "The castle starts to collapse!",
-                                    9 => "The castle collapses further!",
-                                    _ => "Only the centre of the castle remains!",
+                                    5 => "赤色要塞已开始！击败所有怪物和其他玩家。",
+                                    8 => "要塞边缘开始崩塌！",
+                                    9 => "要塞崩塌范围扩大！",
+                                    _ => "仅剩要塞中央区域可立足！",
                                 };
                                 (MuGame.Instance?.ActiveScene as Client.Main.Scenes.GameScene)?.ChatLog?.AddMessage("System", text, Models.MessageType.System);
                             }
@@ -184,14 +184,13 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                 {
                     string message = result switch
                     {
-                        0 => "Successfully entered Blood Castle!",
-                        1 => "Failed to enter Blood Castle.",
-                        2 => "Blood Castle ticket not found or invalid level.",
-                        3 => "You cannot enter at this time.",
-                        4 => "Blood Castle is full.",
-                        5 => "Your level is too low.",
-                        6 => "Your level is too high.",
-                        _ => $"Failed to enter Blood Castle (code: {result})."
+                        0 => "成功进入血色城堡！",
+                        1 => "进入血色城堡失败：未找到匹配的透明披风或等级不符。",
+                        2 => "血色城堡当前尚未开放，请在开放时间进入。",
+                        3 => "血色城堡人数已满。",
+                        4 => "你的等级过低，无法进入血色城堡。",
+                        5 => "你的等级过高，无法进入血色城堡。",
+                        _ => $"进入血色城堡失败（错误码：{result}）。"
                     };
 
                     if (result == 0)

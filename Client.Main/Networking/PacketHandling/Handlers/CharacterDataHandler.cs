@@ -158,9 +158,19 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                 switch (_targetVersion)
                 {
                     case TargetProtocolVersion.Season6:
-                        if (packet.Length >= CharacterInformationExtended.Length)
+                        // OpenMU >= 0.9.9 sends CharacterInformationExtended with length 92 (fields 4..88 + Resets@90),
+                        // while MUnique.OpenMU.Network.Packets 0.9.8 defines Length = 96 with trailing padding.
+                        // Accept >= 89 bytes so 92-byte extended packets are never misparsed as 72-byte non-extended packets.
+                        if (packet.Length >= 89)
                         {
-                            var info = new CharacterInformationExtended(packet);
+                            Memory<byte> extendedPacket = packet;
+                            if (packet.Length < CharacterInformationExtended.Length)
+                            {
+                                var padded = new byte[CharacterInformationExtended.Length];
+                                packet.Span.CopyTo(padded);
+                                extendedPacket = padded;
+                            }
+                            var info = new CharacterInformationExtended(extendedPacket);
                             mapId = info.MapId; x = info.X; y = info.Y;
                             currentExp = info.CurrentExperience;
                             nextExp = info.ExperienceForNextLevel;

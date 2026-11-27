@@ -204,12 +204,20 @@ namespace Client.Main.Controls.UI.Ornate
 
         public static string FormatZen(long amount) => amount.ToString("N0", CultureInfo.InvariantCulture);
 
-        /// <summary>MU short form: 950, 25.5k, 1.5kk, 1.23kkk.</summary>
-        public static string FormatZenShort(long amount) =>
-            amount >= 1_000_000_000 ? (amount / 1e9).ToString("0.##", CultureInfo.InvariantCulture) + "kkk" :
-            amount >= 1_000_000 ? (amount / 1e6).ToString("0.##", CultureInfo.InvariantCulture) + "kk" :
-            amount >= 10_000 ? (amount / 1e3).ToString("0.#", CultureInfo.InvariantCulture) + "k" :
-            amount.ToString(CultureInfo.InvariantCulture);
+        /// <summary>MU short form: 950, 25.5k, 1.5kk, 1.23kkk (or Chinese 万/亿).</summary>
+        public static string FormatZenShort(long amount)
+        {
+            if (Localization.Loc.IsChinese)
+            {
+                if (amount >= 100_000_000) return (amount / 1e8).ToString("0.##", CultureInfo.InvariantCulture) + "亿";
+                if (amount >= 10_000) return (amount / 1e4).ToString("0.#", CultureInfo.InvariantCulture) + "万";
+                return amount.ToString("N0", CultureInfo.InvariantCulture);
+            }
+            return amount >= 1_000_000_000 ? (amount / 1e9).ToString("0.##", CultureInfo.InvariantCulture) + "kkk" :
+                amount >= 1_000_000 ? (amount / 1e6).ToString("0.##", CultureInfo.InvariantCulture) + "kk" :
+                amount >= 10_000 ? (amount / 1e3).ToString("0.#", CultureInfo.InvariantCulture) + "k" :
+                amount.ToString(CultureInfo.InvariantCulture);
+        }
 
         /// <summary>Gem and caption showing whether something is on (green) or off (dull red), e.g. a shop's state.</summary>
         public static void StatusGem(SpriteBatch sb, Rectangle area, bool on, string label, float alpha)

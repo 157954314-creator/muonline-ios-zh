@@ -60,11 +60,17 @@ namespace Client.Main.Controls.UI.Game.Inventory
 
         public static string FormatZen(uint value) => value.ToString("N0", CultureInfo.InvariantCulture);
 
-        /// <summary>Compact MU-style price: 950, 25k, 1.5kk, 2kkk.</summary>
+        /// <summary>Compact MU-style price: 950, 25k, 1.5kk, 2kkk (or Chinese 万/亿).</summary>
         public static string FormatZenShort(uint value)
         {
             static string Trim(double v) => v >= 100 ? v.ToString("0", CultureInfo.InvariantCulture)
                                                      : v.ToString("0.#", CultureInfo.InvariantCulture);
+            if (Localization.Loc.IsChinese)
+            {
+                if (value >= 100_000_000) return Trim(Math.Floor(value / 10_000_000d) / 10d) + "亿";
+                if (value >= 10_000) return Trim(Math.Floor(value / 1_000d) / 10d) + "万";
+                return value.ToString("N0", CultureInfo.InvariantCulture);
+            }
             if (value >= 1_000_000_000) return Trim(Math.Floor(value / 100_000_000d) / 10d) + "kkk";
             if (value >= 1_000_000) return Trim(Math.Floor(value / 100_000d) / 10d) + "kk";
             if (value >= 10_000) return Trim(Math.Floor(value / 100d) / 10d) + "k";

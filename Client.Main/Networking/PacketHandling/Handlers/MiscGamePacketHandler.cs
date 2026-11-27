@@ -82,6 +82,36 @@ namespace Client.Main.Networking.PacketHandling.Handlers
 
         // ─────────────────────── Packet Handlers ────────────────────────
 
+        [PacketHandler(0xAE, PacketRouter.NoSubCode)] // MuHelperConfigurationData (S2C, C2 261 bytes)
+        public Task HandleMuHelperConfigurationDataAsync(Memory<byte> packet)
+        {
+            try
+            {
+                if (packet.Length < 4 + 257)
+                {
+                    _logger.LogDebug("Ignoring short MU Helper config packet ({Length} bytes).", packet.Length);
+                    return Task.CompletedTask;
+                }
+
+                byte[] wireData = packet.Span.Slice(4, 257).ToArray();
+                _characterState.PendingMuHelperWireData = wireData;
+                _logger.LogInformation("Received MU Helper configuration from server (257 bytes).");
+
+                MuGame.ScheduleOnMainThread(() =>
+                {
+                    if (MuGame.Instance?.ActiveScene is GameScene gs && gs.MuHelper != null)
+                    {
+                        gs.MuHelper.ApplyServerWireData(wireData);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling MU Helper configuration packet (0xAE).");
+            }
+            return Task.CompletedTask;
+        }
+
         [PacketHandler(0x50, PacketRouter.NoSubCode)] // GuildJoinRequest (S2C)
         public Task HandleGuildJoinRequestAsync(Memory<byte> packet)
         {

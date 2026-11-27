@@ -247,6 +247,19 @@ namespace Client.Main.Controls.UI.Game.Inventory
         private static readonly Dictionary<string, PreviewCacheEntry> _cache = new();
         private static readonly Dictionary<string, PreviewCacheEntry> _rotatingCache = new();
         private static readonly Dictionary<string, int> _renderFailureRetryFrames = new();
+        // OZT/TGA textures are non-premultiplied with color bled into alpha=0 texels.
+        // Blend into the transparent preview RT as premultiplied Porter-Duff SOURCE_OVER so SpriteBatch (AlphaBlend)
+        // composites cleanly with zero rectangular bleed blocks around wings/pets (e.g. Imp).
+        private static readonly BlendState PreviewNonPremultipliedBlend = new()
+        {
+            ColorSourceBlend = Blend.SourceAlpha,
+            ColorDestinationBlend = Blend.InverseSourceAlpha,
+            ColorBlendFunction = BlendFunction.Add,
+            AlphaSourceBlend = Blend.One,
+            AlphaDestinationBlend = Blend.InverseSourceAlpha,
+            AlphaBlendFunction = BlendFunction.Add,
+        };
+
         private static readonly Dictionary<string, BlendState> _previewBlendStateCache = new();
         private static readonly Dictionary<BMD, PreviewModelGeometry> _geometryCache =
             new(ReferenceComparer<BMD>.Instance);
@@ -1177,7 +1190,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
 
                 gd.SetRenderTarget(rt);
                 gd.Clear(Color.Transparent);
-                gd.BlendState = BlendState.AlphaBlend;
+                gd.BlendState = PreviewNonPremultipliedBlend;
                 gd.DepthStencilState = DepthStencilState.Default;
                 gd.RasterizerState = RasterizerState.CullNone;
                 gd.SamplerStates[0] = GraphicsManager.GetQualityLinearWrapSamplerState();
@@ -1238,10 +1251,8 @@ namespace Client.Main.Controls.UI.Game.Inventory
                 Matrix worldViewProjection = world * view * projection;
                 Vector3 eyePosition = new(0f, 0f, 40f);
 
-                // Dark-textured models disappear on the dark slot background: draw a soft light
-                // silhouette behind them (not in the original client, readability only).
-                if (IsDarkPreviewModel(bmd))
-                    RenderDarkModelOutline(gd, bmd, pose, world, view, projection, height);
+                // Original MU Online renders dark models directly without an artificial 8-direction silhouette outline
+                // (outlining opaque quads leaves ugly rectangular halos behind wings/pets like Imp).
 
                 bool useItemMaterial = props.ShouldUseItemMaterial &&
                                        Constants.ENABLE_ITEM_MATERIAL_SHADER &&

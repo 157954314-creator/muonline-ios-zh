@@ -2267,8 +2267,8 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                         var objToMove = world.FindWalkerById(maskedId);
                         if (objToMove != null)
                         {
-                            objToMove.Location = new Vector2(x, y);
-                            _logger.LogDebug("Updated visual position for {Type} {Id:X4}", objToMove.GetType().Name, maskedId);
+                            objToMove.ResyncPosition(new Vector2(x, y));
+                            _logger.LogDebug("Resynced visual position for {Type} {Id:X4} to ({X},{Y})", objToMove.GetType().Name, maskedId, x, y);
                         }
                     }
                 });
@@ -2346,7 +2346,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                             return;
                         }
 
-                        self.MoveTo(new Vector2(x, y), sendToServer: false, usePathfinding: false);
+                        self.MoveFromServerWalk(new Vector2(x, y), source);
                         return;
                     }
                 }

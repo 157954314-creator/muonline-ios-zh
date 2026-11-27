@@ -198,14 +198,17 @@ namespace Client.Main.Controllers
             const float smallFontSize = 14f;
             GraphicsManager manager = Instance;
 
+            float uiScale = MathF.Max(0.01f, UiScaler.Scale);
+            float screenPixels = desiredSize * uiScale;
+
             if (manager?._uiFonts != null)
             {
-                SpriteFont font = GetScreenFont(desiredSize * MathF.Max(0.01f, UiScaler.Scale), out float pixelScale);
-                scale = pixelScale / MathF.Max(0.01f, UiScaler.Scale);
+                SpriteFont font = GetScreenFont(screenPixels, out float pixelScale);
+                scale = pixelScale / uiScale;
                 return font;
             }
 
-            if (desiredSize <= smallFontSize && manager?.SmallFont != null)
+            if (screenPixels <= 14.5f && manager?.SmallFont != null)
             {
                 scale = desiredSize / smallFontSize;
                 return manager.SmallFont;
@@ -244,7 +247,7 @@ namespace Client.Main.Controllers
                 return fonts[best];
             }
 
-            if (pixels <= 16f && manager?.SmallFont != null)
+            if (pixels <= 14.5f && manager?.SmallFont != null)
             {
                 scale = pixels / 14f;
                 return manager.SmallFont;

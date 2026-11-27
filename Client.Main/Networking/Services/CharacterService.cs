@@ -2096,5 +2096,42 @@ namespace Client.Main.Networking.Services
                 return false;
             }
         }
+
+        /// <summary>
+        /// Saves the 257-byte MU Helper configuration to the server (C2 0xAE, 261 bytes total).
+        /// </summary>
+        public async Task<bool> SendMuHelperSaveDataRequestAsync(byte[] helperData)
+        {
+            if (!_connectionManager.IsConnected || helperData == null || helperData.Length == 0)
+            {
+                return false;
+            }
+
+            const int payloadSize = 257;
+            const int totalLength = 4 + payloadSize; // 261 bytes (C2 header + 0xAE + 257 payload)
+            try
+            {
+                await _connectionManager.Connection.SendAsync(() =>
+                {
+                    var mem = _connectionManager.Connection.Output.GetMemory(totalLength).Slice(0, totalLength);
+                    var span = mem.Span;
+                    span.Clear();
+                    span[0] = 0xC2;
+                    span[1] = (byte)(totalLength >> 8);
+                    span[2] = (byte)(totalLength & 0xFF);
+                    span[3] = 0xAE;
+                    int copyLen = Math.Min(helperData.Length, payloadSize);
+                    helperData.AsSpan(0, copyLen).CopyTo(span.Slice(4, payloadSize));
+                    return totalLength;
+                });
+                _logger.LogInformation("MU Helper configuration saved to server ({Bytes} bytes).", Math.Min(helperData.Length, payloadSize));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving MU Helper configuration (0xAE).");
+                return false;
+            }
+        }
     }
 }

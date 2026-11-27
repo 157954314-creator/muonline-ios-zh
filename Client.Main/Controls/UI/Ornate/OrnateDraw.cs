@@ -66,12 +66,15 @@ namespace Client.Main.Controls.UI.Ornate
             return new Rectangle(plate.X + left, plate.Y, Math.Max(0, plate.Width - left - right), plate.Height);
         }
 
+        private static float OpticalCenterOffsetY(float measuredHeight)
+            => Localization.Loc.IsChinese ? -measuredHeight * 0.08f : 0f;
+
         /// <summary>Text vertically centred in <paramref name="area"/>, starting at its left edge.</summary>
         public static void TextLeft(SpriteBatch sb, string text, Rectangle area, float size, Color color,
             float alpha = 1f, bool bold = false)
         {
             Vector2 measured = Measure(text, size);
-            Text(sb, text, new Vector2(area.X, area.Center.Y - measured.Y * 0.5f), size, color, alpha, bold);
+            Text(sb, text, new Vector2(area.X, area.Center.Y - measured.Y * 0.5f + OpticalCenterOffsetY(measured.Y)), size, color, alpha, bold);
         }
 
         /// <summary>Text vertically centred in <paramref name="area"/>, ending at its right edge.</summary>
@@ -79,14 +82,14 @@ namespace Client.Main.Controls.UI.Ornate
             float alpha = 1f, bool bold = false)
         {
             Vector2 measured = Measure(text, size);
-            Text(sb, text, new Vector2(area.Right - measured.X, area.Center.Y - measured.Y * 0.5f), size, color, alpha, bold);
+            Text(sb, text, new Vector2(area.Right - measured.X, area.Center.Y - measured.Y * 0.5f + OpticalCenterOffsetY(measured.Y)), size, color, alpha, bold);
         }
 
         public static void TextCentered(SpriteBatch sb, string text, Rectangle area, float size, Color color,
             float alpha = 1f, bool bold = false)
         {
             Vector2 measured = Measure(text, size);
-            Text(sb, text, new Vector2(area.Center.X - measured.X * 0.5f, area.Center.Y - measured.Y * 0.5f), size, color, alpha, bold);
+            Text(sb, text, new Vector2(area.Center.X - measured.X * 0.5f, area.Center.Y - measured.Y * 0.5f + OpticalCenterOffsetY(measured.Y)), size, color, alpha, bold);
         }
 
         // --- Frames -------------------------------------------------------------------------------------

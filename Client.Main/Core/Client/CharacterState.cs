@@ -209,6 +209,9 @@ namespace Client.Main.Core.Client
         public event Action VaultItemsChanged;
         public event Action ChaosMachineItemsChanged;
 
+        // Pending 257-byte MU Helper server configuration received on login (0xAE)
+        public byte[] PendingMuHelperWireData { get; set; }
+
         // Legacy quest state (A0/A1/A2/A3/A4) - used for class change quests (Sebina/Marlon/Devin)
         private readonly object _legacyQuestStateLock = new();
         private readonly byte[] _legacyQuestStateBytes = new byte[2];

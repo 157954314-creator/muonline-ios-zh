@@ -114,12 +114,12 @@ namespace Client.Main.Core.Client
             return questIndex switch
             {
                 // Class change quests
-                0 => "Sebina the Priestess",
-                1 => "Marlon the Wizard",
-                2 => "Devin the Warrior",
-                3 => "Devin the Dark Knight",
+                0 => "圣导士塞维娜",
+                1 => "警卫队长马隆",
+                2 => "弟子黛彬",
+                3 => "弟子黛彬",
                 // Default
-                _ => $"Quest NPC #{questIndex}"
+                _ => $"任务 NPC #{questIndex}"
             };
         }
 
@@ -130,11 +130,11 @@ namespace Client.Main.Core.Client
         {
             return questIndex switch
             {
-                0 => "First Class Change",
-                1 => "Second Class Change",
-                2 => "Third Class Change (Part 1)",
-                3 => "Third Class Change (Part 2)",
-                _ => $"Quest {questIndex}"
+                0 => "第一次转职任务",
+                1 => "第二次转职任务",
+                2 => "第三次转职任务（第一阶段）",
+                3 => "第三次转职任务（第二阶段）",
+                _ => $"任务 {questIndex}"
             };
         }
 
@@ -145,11 +145,11 @@ namespace Client.Main.Core.Client
         {
             return questIndex switch
             {
-                0 => "Reach level 150\nCollect Scroll of the Emperor",
-                1 => "Reach level 220\nCollect Marlon's Quest Item",
-                2 => "Reach level 380\nCollect Three Divine Items",
-                3 => "Reach level 400\nDefeat Dark Elf enemies\nSpeak with Devin",
-                _ => "Unknown requirements"
+                0 => "达到 150 级\n收集帝王之书",
+                1 => "达到 220 级\n收集马隆任务物品",
+                2 => "达到 380 级\n收集三件神圣遗物",
+                3 => "达到 400 级\n击败暗黑精灵\n向弟子黛彬复命",
+                _ => "未知条件"
             };
         }
 
@@ -160,11 +160,11 @@ namespace Client.Main.Core.Client
         {
             return questIndex switch
             {
-                0 => "First Class Change: New skills unlocked",
-                1 => "Second Class Change: Advanced skills and stats",
-                2 => "Third Class Change: Master skills (Part 1)",
-                3 => "Third Class Change: Master class complete (Part 2)",
-                _ => "Unknown reward"
+                0 => "一转奖励：解锁二阶职业与新技能",
+                1 => "二转奖励：每级额外属性点与连击技能",
+                2 => "三转奖励：开启大师试炼（第一阶段）",
+                3 => "三转奖励：晋升大师职业（第二阶段）",
+                _ => "未知奖励"
             };
         }
 

@@ -77,13 +77,19 @@ namespace Client.Main.Controls.UI.Game.Skills
                     string disabledPath = DisabledVariant(texturePath);
                     disabledKey = Content.TextureLoader.NormalizeTextureKey(disabledPath);
                     _disabledKeys[texturePath] = disabledKey;
-                    _ = Content.TextureLoader.Instance.Prepare(disabledPath); // first use: load the non-skill atlas
                 }
                 var disabled = Content.TextureLoader.Instance.GetTexture2DByKey(disabledKey);
-                if (disabled != null)
+                if (disabled != null && !disabled.IsDisposed)
                     return disabled;
+                _ = Content.TextureLoader.Instance.Prepare(DisabledVariant(texturePath));
             }
-            return Content.TextureLoader.Instance.GetTexture2D(texturePath);
+            var normal = Content.TextureLoader.Instance.GetTexture2D(texturePath);
+            if (normal == null || normal.IsDisposed)
+            {
+                _ = Content.TextureLoader.Instance.Prepare(texturePath);
+                return null;
+            }
+            return normal;
         }
 
         private static readonly Dictionary<string, string> _disabledKeys = new();
@@ -116,7 +122,10 @@ namespace Client.Main.Controls.UI.Game.Skills
             string texPath = disabled ? DisabledVariant(frame.TexturePath) : frame.TexturePath;
             var info = Content.TextureLoader.Instance.Get(texPath);
             if (info?.Data == null || info.Data.Length == 0 || info.Width <= 0)
+            {
+                _ = Content.TextureLoader.Instance.Prepare(texPath);
                 return null; // atlas ainda carregando — tenta de novo no próximo draw
+            }
             if (info.IsCompressed || (info.Components != 3 && info.Components != 4))
             {
                 _circleFailed.Add(key); // formato inesperado: fica no fallback scanline
@@ -192,8 +201,11 @@ namespace Client.Main.Controls.UI.Game.Skills
             if (!SkillIconAtlas.TryResolve(skillId, definition, out var frame))
                 return false;
             var tex = Content.TextureLoader.Instance.GetTexture2D(frame.TexturePath);
-            if (tex == null)
+            if (tex == null || tex.IsDisposed)
+            {
+                _ = Content.TextureLoader.Instance.Prepare(frame.TexturePath);
                 return false;
+            }
             var src = SkillIconAtlas.ScaleToTexture(SkillIconAtlas.CircleSource(frame.SourceRectangle), tex);
             DrawCircleClipped(sb, tex, src, destRect, color, inset);
             return true;

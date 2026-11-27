@@ -115,7 +115,7 @@ namespace Client.Main.Controls.UI.Game
 
             _titleLabel = new LabelControl
             {
-                Text = "Warp Command Window",
+                Text = "地图传送",
                 Align = ControlAlign.Top | ControlAlign.HorizontalCenter,
                 X = 0,
                 Y = PADDING_TITLE_TOP,
@@ -143,7 +143,7 @@ namespace Client.Main.Controls.UI.Game
 
             _closeButton = new ButtonControl
             {
-                Text = "Close",
+                Text = "关闭",
                 X = (ControlSize.X - 60) / 2,
                 Y = ControlSize.Y - PADDING_BOTTOM - (ITEM_HEIGHT + 2), // Na samym dole
                 ViewSize = new Point(60, ITEM_HEIGHT + 2),
@@ -204,8 +204,27 @@ namespace Client.Main.Controls.UI.Game
             {
                 map.CanMove = CanPlayerMoveTo(map, playerState);
                 return map;
-            }).ToList();
-            _currentlyDisplayableMaps = _currentlyDisplayableMaps.OrderBy(m => m.Index).ToList();
+            })
+            .OrderBy(m => GetEffectiveRequiredLevel(m, playerState))
+            .ThenBy(m => m.RequiredZen)
+            .ThenBy(m => m.Index)
+            .ToList();
+        }
+
+        private static int GetEffectiveRequiredLevel(MoveCommandInfo mapInfo, CharacterState playerState)
+        {
+            int requiredLevel = mapInfo.RequiredLevel;
+            if (playerState != null &&
+                (playerState.Class == CharacterClassNumber.MagicGladiator || playerState.Class == CharacterClassNumber.DuelMaster ||
+                 playerState.Class == CharacterClassNumber.DarkLord || playerState.Class == CharacterClassNumber.LordEmperor ||
+                 playerState.Class == CharacterClassNumber.RageFighter || playerState.Class == CharacterClassNumber.FistMaster))
+            {
+                if (mapInfo.RequiredLevel != 400)
+                {
+                    requiredLevel = (int)(mapInfo.RequiredLevel * 2.0f / 3.0f);
+                }
+            }
+            return requiredLevel;
         }
 
         private bool CanPlayerMoveTo(MoveCommandInfo mapInfo, CharacterState playerState)
@@ -213,18 +232,7 @@ namespace Client.Main.Controls.UI.Game
             if (playerState == null) return false;
             int playerLevel = playerState.Level;
             uint playerZen = playerState.InventoryZen;
-            int requiredLevel = mapInfo.RequiredLevel;
-            var charClass = playerState.Class;
-
-            if (charClass == CharacterClassNumber.MagicGladiator || charClass == CharacterClassNumber.DuelMaster ||
-                charClass == CharacterClassNumber.DarkLord || charClass == CharacterClassNumber.LordEmperor ||
-                charClass == CharacterClassNumber.RageFighter || charClass == CharacterClassNumber.FistMaster)
-            {
-                if (mapInfo.RequiredLevel != 400)
-                {
-                    requiredLevel = (int)(mapInfo.RequiredLevel * 2.0f / 3.0f);
-                }
-            }
+            int requiredLevel = GetEffectiveRequiredLevel(mapInfo, playerState);
             if (playerLevel < requiredLevel) return false;
             if (playerZen < mapInfo.RequiredZen) return false;
             if (playerState.HeroState == CharacterHeroState.PlayerKiller1stStage || playerState.HeroState == CharacterHeroState.PlayerKiller2ndStage)
@@ -636,9 +644,9 @@ namespace Client.Main.Controls.UI.Game
             var header = new Rectangle(rows.X + 10, frame.Y + ORNATE_HEADER_Y, rows.Width - 20, 20);
             int zenRight = header.Right;
             int levelRight = zenRight - ORNATE_ZEN_COLUMN;
-            OrnateDraw.TextLeft(sb, "MAP", header, 11f, OrnateStyle.GoldDim, alpha, bold: true);
-            OrnateDraw.TextRight(sb, "LEVEL", new Rectangle(header.X, header.Y, levelRight - header.X, header.Height), 11f, OrnateStyle.GoldDim, alpha, bold: true);
-            OrnateDraw.TextRight(sb, "ZEN", header, 11f, OrnateStyle.GoldDim, alpha, bold: true);
+            OrnateDraw.TextLeft(sb, "地图", header, 11f, OrnateStyle.GoldDim, alpha, bold: true);
+            OrnateDraw.TextRight(sb, "等级", new Rectangle(header.X, header.Y, levelRight - header.X, header.Height), 11f, OrnateStyle.GoldDim, alpha, bold: true);
+            OrnateDraw.TextRight(sb, "金币", header, 11f, OrnateStyle.GoldDim, alpha, bold: true);
 
             Rectangle list = OrnateListRect;
             Rectangle well = list;
@@ -678,7 +686,7 @@ namespace Client.Main.Controls.UI.Game
             // Footer: the character's Zen.
             var zenField = OrnateAt(ORNATE_PAD, ORNATE_HEIGHT - ORNATE_PAD - ORNATE_FOOTER_HEIGHT, ORNATE_WIDTH - ORNATE_PAD * 2, ORNATE_FOOTER_HEIGHT);
             OrnateDraw.Divider(sb, new Rectangle(frame.X + 40, zenField.Y - 18, frame.Width - 80, 14), alpha);
-            OrnateItemUi.ZenField(sb, zenField, state?.InventoryZen ?? 0, alpha, "Zen");
+            OrnateItemUi.ZenField(sb, zenField, state?.InventoryZen ?? 0, alpha, "金币");
 
             OrnateWidgets.CloseButton(sb, OrnateCloseRect, _ornateCloseHovered, alpha);
             OrnateDraw.TitlePlaque(sb, Localization.Loc.IsChinese ? "地图传送" : "Warp", frame.Center.X, frame.Y + 2, 40, alpha);

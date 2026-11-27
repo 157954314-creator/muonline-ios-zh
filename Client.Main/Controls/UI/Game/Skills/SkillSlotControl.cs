@@ -290,7 +290,7 @@ namespace Client.Main.Controls.UI.Game.Skills
                     DrawCenteredText(
                         spriteBatch,
                         font,
-                        "EMPTY",
+                        "空",
                         iconArea,
                         ModernHudTheme.TextDark * Alpha,
                         textScale);
@@ -478,17 +478,17 @@ namespace Client.Main.Controls.UI.Game.Skills
 
             string typeText = skillType switch
             {
-                SkillType.Area => "Area",
-                SkillType.Target => "Target",
-                SkillType.Self => "Self",
-                _ => "Unknown"
+                SkillType.Area => "范围",
+                SkillType.Target => "单体",
+                SkillType.Self => "自身",
+                _ => "未知"
             };
 
-            var tooltip = $"{skillName}\nType: {typeText}  •  Lv {_skill.SkillLevel}";
+            var tooltip = $"{skillName}\n类型: {typeText}  ·  Lv {_skill.SkillLevel}";
 
             if (manaCost > 0 || agCost > 0)
             {
-                tooltip += $"\nMana: {manaCost}";
+                tooltip += $"\n魔力: {manaCost}";
                 if (agCost > 0)
                     tooltip += $"   AG: {agCost}";
             }
@@ -496,13 +496,13 @@ namespace Client.Main.Controls.UI.Game.Skills
             if (skillDef != null)
             {
                 if (skillDef.Damage > 0)
-                    tooltip += $"\nDamage: {skillDef.Damage}";
+                    tooltip += $"\n伤害: {skillDef.Damage}";
 
                 if (range > 0)
-                    tooltip += $"\nRange: {range}";
+                    tooltip += $"\n射程: {range}";
 
                 if (skillDef.RequiredLevel > 0)
-                    tooltip += $"\nRequired Lv: {skillDef.RequiredLevel}";
+                    tooltip += $"\n需求等级: {skillDef.RequiredLevel}";
 
                 // Stat requirements (SourceMain: DemendConditionCheckSkill display)
                 bool hasStats = skillDef.RequiredStrength > 0 || skillDef.RequiredDexterity > 0
@@ -511,20 +511,20 @@ namespace Client.Main.Controls.UI.Game.Skills
                 {
                     tooltip += "\n---";
                     if (skillDef.RequiredStrength > 0)
-                        tooltip += $"\nStr: {skillDef.RequiredStrength}";
+                        tooltip += $"\n力量: {skillDef.RequiredStrength}";
                     if (skillDef.RequiredDexterity > 0)
-                        tooltip += $"\nDex: {skillDef.RequiredDexterity}";
+                        tooltip += $"\n敏捷: {skillDef.RequiredDexterity}";
                     if (skillDef.RequiredEnergy > 0)
-                        tooltip += $"\nEne: {skillDef.RequiredEnergy}"; // checked as is (SkillManager.GetUnmetDemand)
+                        tooltip += $"\n智力: {skillDef.RequiredEnergy}"; // checked as is (SkillManager.GetUnmetDemand)
                     if (skillDef.RequiredLeadership > 0)
-                        tooltip += $"\nCmd: {skillDef.RequiredLeadership}";
+                        tooltip += $"\n统率: {skillDef.RequiredLeadership}";
                 }
 
                 if (skillDef.Delay > 0)
-                    tooltip += $"\nCooldown: {skillDef.Delay / 1000f:F1}s";
+                    tooltip += $"\n冷却: {skillDef.Delay / 1000f:F1}秒";
 
                 if (skillDef.MasteryType > 0)
-                    tooltip += $"\nMastery: Tier {skillDef.MasteryType}";
+                    tooltip += $"\n大师层级: {skillDef.MasteryType}";
             }
 
             _tooltipText = tooltip;
@@ -545,9 +545,14 @@ namespace Client.Main.Controls.UI.Game.Skills
                 return;
             }
 
-            _iconTexture = TextureLoader.Instance.GetTexture2D(frame.TexturePath);
             _iconPath = frame.TexturePath;
             _iconSource = frame.SourceRectangle;
+            _iconTexture = TextureLoader.Instance.GetTexture2D(frame.TexturePath);
+            if (_iconTexture == null || _iconTexture.IsDisposed)
+            {
+                _iconTexture = null;
+                _ = TextureLoader.Instance.Prepare(frame.TexturePath);
+            }
         }
 
         /// <summary>

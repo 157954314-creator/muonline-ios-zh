@@ -20,12 +20,12 @@ namespace Client.Main.Controls.UI.Game.Inventory
 
         private static readonly (string Label, PetCommand Command, Color Color)[] CommandButtons =
         [
-            ("Attack (Random)", PetCommand.AttackRandom, new Color(220, 50, 40)),
-            ("Attack (Same Target)", PetCommand.AttackSameTarget, new Color(200, 80, 40)),
-            ("Attack (With Owner)", PetCommand.AttackWithOwner, new Color(180, 120, 40)),
-            ("Defense", PetCommand.Defense, new Color(40, 140, 220)),
-            ("Collect Items", PetCommand.Collect, new Color(180, 160, 40)),
-            ("Wait (Stay)", PetCommand.Wait, new Color(140, 140, 140)),
+            ("随机攻击", PetCommand.AttackRandom, new Color(220, 50, 40)),
+            ("攻击同一目标", PetCommand.AttackSameTarget, new Color(200, 80, 40)),
+            ("随主人攻击", PetCommand.AttackWithOwner, new Color(180, 120, 40)),
+            ("防御模式", PetCommand.Defense, new Color(40, 140, 220)),
+            ("自动拾取", PetCommand.Collect, new Color(180, 160, 40)),
+            ("原地待命", PetCommand.Wait, new Color(140, 140, 140)),
         ];
 
         private const int BtnHeight = 26;

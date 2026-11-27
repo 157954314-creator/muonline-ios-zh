@@ -226,7 +226,7 @@ namespace Client.Main.Controls.UI.Game.Hud
         {
             _open = false;
             UpdateBounds();
-            RequestDialog.Show("Do you want to exit the game?", () =>
+            RequestDialog.Show("确定要退出游戏吗？", () =>
             {
 #if !IOS
                 MuGame.ScheduleOnMainThread(() => MuGame.Instance.Exit());

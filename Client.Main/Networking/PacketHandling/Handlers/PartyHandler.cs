@@ -42,8 +42,33 @@ namespace Client.Main.Networking.PacketHandling.Handlers
 
             MuGame.ScheduleOnMainThread(() =>
             {
+                if (MuGame.Instance?.ActiveScene is Scenes.GameScene gs && gs.MuHelper is { IsRunning: true } helper)
+                {
+                    bool autoAccept = false;
+                    if (helper.Config.AutoAcceptFriend)
+                    {
+                        var friendMgr = MuGame.Network?.GetFriendManager();
+                        if (friendMgr != null && friendMgr.IsFriend(requesterName))
+                            autoAccept = true;
+                    }
+                    if (!autoAccept && helper.Config.AutoAcceptGuild)
+                    {
+                        var guilds = MuGame.Network?.GetGuildManager();
+                        if (guilds is { HasGuild: true } && guilds.GetPlayerGuildId((ushort)(requesterId & 0x7FFF)) == guilds.OwnGuildId)
+                            autoAccept = true;
+                    }
+
+                    if (autoAccept)
+                    {
+                        _ = _characterService.SendPartyResponseAsync(true, requesterId);
+                        gs.ChatLog?.AddMessage("系统", $"[游戏助手] 已自动接受 {requesterName} 的组队邀请。", Models.MessageType.System);
+                        _logger.LogInformation("MU Helper auto-accepted party invite from {Name} ({Id}).", requesterName, requesterId);
+                        return;
+                    }
+                }
+
                 RequestDialog.Show(
-                    $"{requesterName} has invited you to a party.",
+                    $"{requesterName} 邀请你加入队伍。",
                     onAccept: () =>
                     {
                         _ = _characterService.SendPartyResponseAsync(true, requesterId);

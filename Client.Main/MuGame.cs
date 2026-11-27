@@ -1986,8 +1986,27 @@ namespace Client.Main
             }
             else
             {
-                _graphics.PreferredBackBufferWidth = Math.Max(1, graphics.Width);
-                _graphics.PreferredBackBufferHeight = Math.Max(1, graphics.Height);
+                int targetWidth = Math.Max(1, graphics.Width);
+                int targetHeight = Math.Max(1, graphics.Height);
+
+                if (!graphics.IsFullScreen)
+                {
+                    var displayMode = GraphicsDevice?.Adapter?.CurrentDisplayMode ?? GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+                    if (displayMode != null && displayMode.Width > 0 && displayMode.Height > 0)
+                    {
+                        int maxW = Math.Max(640, displayMode.Width - 64);
+                        int maxH = Math.Max(480, displayMode.Height - 96);
+                        if (targetWidth > maxW || targetHeight > maxH)
+                        {
+                            float scale = Math.Min((float)maxW / targetWidth, (float)maxH / targetHeight);
+                            targetWidth = Math.Max(640, (int)Math.Round(targetWidth * scale));
+                            targetHeight = Math.Max(480, (int)Math.Round(targetHeight * scale));
+                        }
+                    }
+                }
+
+                _graphics.PreferredBackBufferWidth = targetWidth;
+                _graphics.PreferredBackBufferHeight = targetHeight;
                 _graphics.IsFullScreen = graphics.IsFullScreen;
 
                 // In fullscreen mode, we need HardwareModeSwitch = true to actually change resolution.

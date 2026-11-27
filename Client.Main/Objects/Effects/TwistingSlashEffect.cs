@@ -265,7 +265,9 @@ namespace Client.Main.Objects.Effects
                         MathHelper.ToRadians(w.Angle.X),
                         MathHelper.ToRadians(90f),
                         MathHelper.ToRadians(w.Angle.Z + w.Direction2));
-                    Vector3 position = w.Position + new Vector3(0f, 0f, 100f * factor);
+                    // Keep weapon ring at steady waist/chest height (+100f), NOT scaled by frame factor
+                    // (multiplying a static Z offset by FrameFactor makes the spinning sword jump vertically with FPS).
+                    Vector3 position = w.Position + new Vector3(0f, 0f, 100f);
                     Vector3 light = (World?.Terrain?.EvaluateTerrainLight(position.X, position.Y) ?? Vector3.Zero) + Vector3.One;
                     _weapon.DrawInstance(position, angle, 1f, light, 1f, w.Alpha);
                 }

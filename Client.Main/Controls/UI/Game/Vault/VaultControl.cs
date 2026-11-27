@@ -1769,11 +1769,7 @@ namespace Client.Main.Controls.UI.Game
                 var def = ItemDatabase.GetItemDefinition(data)
                     ?? new ItemDefinition(0, ItemDatabase.GetItemName(data) ?? "Unknown Item", 1, 1, "Interface/newui_item_box.tga");
 
-                var item = new InventoryItem(def, new Point(gridX, gridY), data);
-                if (data.Length > 2)
-                {
-                    item.Durability = data[2];
-                }
+                var item = new InventoryItem(def, new Point(gridX, gridY), data, ItemDatabase.GetItemDurability(data));
 
                 _items.Add(item);
                 _serverSlots[item] = slot;
@@ -2047,7 +2043,7 @@ namespace Client.Main.Controls.UI.Game
             {
                 if (amount > inventoryZen)
                 {
-                    RequestDialog.ShowInfo("Not enough Zen in inventory.");
+                    RequestDialog.ShowInfo("背包金币不足。");
                     return;
                 }
             }
@@ -2055,13 +2051,13 @@ namespace Client.Main.Controls.UI.Game
             {
                 if (amount > vaultZen)
                 {
-                    RequestDialog.ShowInfo("Not enough Zen in vault.");
+                    RequestDialog.ShowInfo("仓库金币不足。");
                     return;
                 }
 
                 if (inventoryZen >= MaxZen || (ulong)inventoryZen + amount > MaxZen)
                 {
-                    RequestDialog.ShowInfo("Inventory Zen limit reached.");
+                    RequestDialog.ShowInfo("背包金币已达上限。");
                     return;
                 }
             }

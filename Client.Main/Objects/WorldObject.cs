@@ -640,7 +640,7 @@ namespace Client.Main.Objects
                 sb,
                 SpriteSortMode.Deferred,
                 BlendState.AlphaBlend,
-                SamplerState.PointClamp,
+                SamplerState.LinearClamp,
                 DepthStencilState.None,
                 RasterizerState.CullNone,
                 effect: null,

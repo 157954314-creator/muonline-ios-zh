@@ -84,14 +84,14 @@ namespace Client.Main.Scenes
 
             if (string.IsNullOrWhiteSpace(host))
             {
-                _dialog.SetError("Please enter a valid host.");
+                _dialog.SetError("请输入有效的服务器地址。");
                 _dialog.FocusHost();
                 return;
             }
 
             if (!int.TryParse(portText, out var port) || port <= 0 || port > 65535)
             {
-                _dialog.SetError("Please enter a port between 1 and 65535.");
+                _dialog.SetError("请输入 1-65535 之间的端口。");
                 _dialog.FocusPort();
                 return;
             }
@@ -237,7 +237,7 @@ namespace Client.Main.Scenes
 
             Controls.Add(_titleLabel = new LabelControl
             {
-                Text = "Connection Settings",
+                Text = "服务器连接设置",
                 Align = ControlAlign.HorizontalCenter,
                 Y = 12,
                 FontSize = 14f,
@@ -256,17 +256,19 @@ namespace Client.Main.Scenes
 
             Controls.Add(_hostLabel = new LabelControl
             {
-                Text = "Host",
-                X = 26,
+                Text = "服务器地址",
+                X = 18,
                 Y = 72,
                 AutoViewSize = false,
-                ViewSize = new Point(70, 20),
+                ViewSize = new Point(82, 20),
                 TextAlign = HorizontalAlign.Right,
                 FontSize = 12f,
                 TextColor = ModernHudTheme.TextGray
             });
 
             _hostInput = TextFieldControl.Create();
+            _hostInput.Label = "服务器地址";
+            _hostInput.Placeholder = "输入服务器 IP 或域名";
             _hostInput.X = 110;
             _hostInput.Y = 68;
             _hostInput.Skin = TextFieldSkin.NineSlice;
@@ -278,17 +280,19 @@ namespace Client.Main.Scenes
 
             Controls.Add(_portLabel = new LabelControl
             {
-                Text = "Port",
-                X = 26,
+                Text = "端口",
+                X = 18,
                 Y = 108,
                 AutoViewSize = false,
-                ViewSize = new Point(70, 20),
+                ViewSize = new Point(82, 20),
                 TextAlign = HorizontalAlign.Right,
                 FontSize = 12f,
                 TextColor = ModernHudTheme.TextGray
             });
 
             _portInput = TextFieldControl.Create();
+            _portInput.Label = "端口";
+            _portInput.Placeholder = "例如 44405";
             _portInput.X = 110;
             _portInput.Y = 104;
             _portInput.Skin = TextFieldSkin.NineSlice;
@@ -321,7 +325,7 @@ namespace Client.Main.Scenes
 
             _classicOkButton = new ButtonControl
             {
-                Text = "CONNECT",
+                Text = "连接",
                 AutoViewSize = false,
                 FontSize = 12f,
                 BackgroundColor = ModernHudTheme.Success,

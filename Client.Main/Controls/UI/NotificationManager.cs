@@ -91,11 +91,13 @@ namespace Client.Main.Controls.UI
         /// </summary>
         private void RecalculateStack()
         {
+            float baseStep = UiScaler.VirtualSize.Y * ORIGINAL_NOTICE_LINE_HEIGHT;
             float currentY = _spawnCenter.Y;
             foreach (var note in _active)
             {
                 note.SetCenterY(currentY);
-                currentY += UiScaler.VirtualSize.Y * ORIGINAL_NOTICE_LINE_HEIGHT;
+                float noteHeight = note.ControlSize.Y > 0 ? note.ControlSize.Y + 4f : baseStep;
+                currentY += System.MathF.Max(baseStep, noteHeight);
             }
         }
 

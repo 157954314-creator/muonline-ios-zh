@@ -715,7 +715,7 @@ _modelObj = model;
             sb.Append(baseName);
 
             if (details.Level > 0) sb.Append($" +{details.Level}");
-            if (details.OptionLevel > 0) sb.Append(zh ? $" +追{details.OptionLevel * 4}" : $" +Options{details.OptionLevel * 4}");
+            if (details.OptionLevel > 0) sb.Append(zh ? " +属性" : " +Option");
             if (details.HasLuck) sb.Append(zh ? " +幸运" : " +Luck");
             if (details.HasSkill) sb.Append(zh ? " +技能" : " +Skill");
 

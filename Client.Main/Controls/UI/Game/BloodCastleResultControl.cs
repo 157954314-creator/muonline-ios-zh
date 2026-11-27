@@ -195,7 +195,7 @@ namespace Client.Main.Controls.UI.Game
             float y = rect.Y + 20;
 
             // Title
-            string title = "BLOOD CASTLE RESULT";
+            string title = "血色城堡结算";
             Vector2 titleSize = _font.MeasureString(title) * FONT_SCALE_TITLE;
             float titleX = rect.X + (rect.Width - titleSize.X) / 2f;
             DrawTextWithShadow(sb, _font, title, titleX, y, FONT_SCALE_TITLE, Theme.TextWhite);
@@ -203,8 +203,8 @@ namespace Client.Main.Controls.UI.Game
 
             // Success/Failure message
             Color resultColor = _success ? Theme.Success : Theme.Failure;
-            string line1 = _success ? "Mission Complete!" : "Mission Failed!";
-            string line2 = _success ? "You have successfully protected the Saint." : "The Saint has been slain.";
+            string line1 = _success ? "任务完成！" : "任务失败！";
+            string line2 = _success ? "你成功守护了大天使。" : "未能及时完成大天使的委托。";
 
             Vector2 line1Size = _font.MeasureString(line1) * FONT_SCALE_BODY;
             float line1X = rect.X + (rect.Width - line1Size.X) / 2f;
@@ -217,7 +217,7 @@ namespace Client.Main.Controls.UI.Game
             y += line2Size.Y + 20;
 
             // Experience
-            string expText = $"Experience Gained: {_experience:N0}";
+            string expText = $"获得经验：{_experience:N0}";
             Vector2 expSize = _font.MeasureString(expText) * FONT_SCALE_BODY;
             float expX = rect.X + (rect.Width - expSize.X) / 2f;
             DrawTextWithShadow(sb, _font, expText, expX, y, FONT_SCALE_BODY, Theme.ExpColor);
@@ -226,7 +226,7 @@ namespace Client.Main.Controls.UI.Game
             // Zen (only on success)
             if (_success)
             {
-                string zenText = $"Zen Gained: {_zen:N0}";
+                string zenText = $"获得金币：{_zen:N0}";
                 Vector2 zenSize = _font.MeasureString(zenText) * FONT_SCALE_BODY;
                 float zenX = rect.X + (rect.Width - zenSize.X) / 2f;
                 DrawTextWithShadow(sb, _font, zenText, zenX, y, FONT_SCALE_BODY, Theme.ZenColor);
@@ -234,7 +234,7 @@ namespace Client.Main.Controls.UI.Game
             }
 
             // Score
-            string scoreText = $"Score: {_score:N0}";
+            string scoreText = $"积分：{_score:N0}";
             Vector2 scoreSize = _font.MeasureString(scoreText) * FONT_SCALE_BODY;
             float scoreX = rect.X + (rect.Width - scoreSize.X) / 2f;
             DrawTextWithShadow(sb, _font, scoreText, scoreX, y, FONT_SCALE_BODY, Theme.ScoreColor);

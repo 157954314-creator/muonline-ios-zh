@@ -159,7 +159,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
             if (Visible && _ownerId == ownerId)
             {
                 CloseShop();
-                RequestDialog.ShowInfo($"{_ownerName} closed the shop.");
+                RequestDialog.ShowInfo($"{_ownerName} 关闭了个人商店。");
             }
         }
 
@@ -241,18 +241,18 @@ namespace Client.Main.Controls.UI.Game.Inventory
             string itemName = PlayerShopUi.GetItemDisplayName(entry.Item);
             if (!entry.Known || entry.Price == 0)
             {
-                RequestDialog.ShowInfo("This item or its price cannot be identified. Purchase is unavailable.");
+                RequestDialog.ShowInfo("无法识别该物品或其价格，暂无法购买。");
                 return;
             }
             if (entry.Price > CurrentZen)
             {
-                RequestDialog.ShowInfo($"Not enough Zen. {itemName} costs {PlayerShopUi.FormatZen(entry.Price)} Zen, you have {PlayerShopUi.FormatZen(CurrentZen)}.");
+                RequestDialog.ShowInfo($"金币不足。{itemName} 需要 {PlayerShopUi.FormatZen(entry.Price)} 金币，你当前只有 {PlayerShopUi.FormatZen(CurrentZen)} 金币。");
                 return;
             }
 
             ushort ownerId = _ownerId;
             string ownerName = _ownerName;
-            RequestDialog.Show($"Buy {itemName} for {PlayerShopUi.FormatZen(entry.Price)} Zen?",
+            RequestDialog.Show($"确定花费 {PlayerShopUi.FormatZen(entry.Price)} 金币购买 {itemName} 吗？",
                 onAccept: () =>
                 {
                     if (Visible && !_purchasePending && _ownerId == ownerId && _ownerName == ownerName && _items.Contains(entry))
@@ -262,7 +262,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
                         BuyRequested?.Invoke(ownerId, ownerName, entry.Slot);
                     }
                 },
-                acceptText: "Buy", rejectText: "Cancel");
+                acceptText: "购买", rejectText: "取消");
         }
 
         // ─────────────────────────────── Draw ───────────────────────────────

@@ -119,10 +119,10 @@ namespace Client.Main.Controls.UI.Game
 
         private static readonly string[] InstructionLines =
         {
-            "Enter with a Devil's Invitation ticket.",
-            "Only the highlighted gate matches your level.",
-            "Each gate corresponds to a specific level range.",
-            "Entrance closes shortly before the event starts."
+            "需携带对应层级的恶魔广场通行证方可进入。",
+            "仅高亮显示的入口符合你当前的等级范围。",
+            "每个入口对应不同的等级区间。",
+            "活动开始前不久将关闭入口。"
         };
 
         private DevilSquareEnterControl()
@@ -345,7 +345,7 @@ namespace Client.Main.Controls.UI.Game
 
         private void DrawHeaderTitle(SpriteBatch sb)
         {
-            string title = "DEVIL SQUARE";
+            string title = "恶魔广场";
             float scale = FONT_SCALE_TITLE;
             Vector2 size = _font.MeasureString(title) * scale;
             Vector2 pos = new((ControlSize.X - size.X) / 2f, (_headerRect.Height - size.Y) / 2f + 4);
@@ -434,7 +434,7 @@ namespace Client.Main.Controls.UI.Game
 
                 if (isActive)
                 {
-                    string actionText = _hasMatchingInvitation ? "ENTER" : "INVITATION";
+                    string actionText = _hasMatchingInvitation ? "进入" : "需门票";
                     Color actionColor = _hasMatchingInvitation ? Theme.Success : Theme.Warning;
                     Vector2 actionSize = _font.MeasureString(actionText) * FONT_SCALE_SMALL;
                     float actionX = rowRect.Right - actionSize.X - 12;
@@ -446,23 +446,23 @@ namespace Client.Main.Controls.UI.Game
 
         private void DrawFooterStatus(SpriteBatch sb)
         {
-            string gateText = $"Active Gate: Devil Square {_activeIndex + 1}";
+            string gateText = $"当前匹配入口：恶魔广场 {_activeIndex + 1} 层";
             string statusText;
             Color statusColor;
 
             if (_hasMatchingInvitation)
             {
-                statusText = $"Invitation OK: Devil's Invitation +{_expectedInvitationLevel}";
+                statusText = $"通行证就绪：恶魔广场通行证 +{_expectedInvitationLevel}";
                 statusColor = Theme.Success;
             }
             else if (_hasAnyInvitation)
             {
-                statusText = $"Invitation mismatch: need +{_expectedInvitationLevel}, have +{_foundInvitationLevel}";
+                statusText = $"通行证不匹配：需要 +{_expectedInvitationLevel}，当前背包为 +{_foundInvitationLevel}";
                 statusColor = Theme.Warning;
             }
             else
             {
-                statusText = "Devil's Invitation required to enter.";
+                statusText = "进入需要携带对应等级的恶魔广场通行证。";
                 statusColor = Theme.Danger;
             }
 
@@ -631,10 +631,10 @@ namespace Client.Main.Controls.UI.Game
 
             for (int i = 0; i < ENTRY_COUNT; i++)
             {
-                _entryLabels[i] = $"Devil Square {i + 1}";
+                _entryLabels[i] = $"恶魔广场 {i + 1} 层";
                 if (i == ENTRY_COUNT - 1)
                 {
-                    _entryRanges[i] = "Master Level";
+                    _entryRanges[i] = "大师等级";
                 }
                 else
                 {

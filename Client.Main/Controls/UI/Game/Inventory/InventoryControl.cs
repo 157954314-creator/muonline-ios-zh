@@ -1497,7 +1497,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
             if (_leftFooterHovered)
             {
                 if (_networkManager?.TargetVersion != TargetProtocolVersion.Season6)
-                    RequestDialog.ShowInfo("Personal shop is only available with the Season 6 protocol.");
+                    RequestDialog.ShowInfo("个人商店仅在 Season 6 协议下可用。");
                 else if (Scene is Client.Main.Scenes.GameScene gameScene)
                     gameScene.OwnPlayerShop?.Toggle();
                 SoundController.Instance.PlayBuffer("Sound/iButtonClick.wav");
@@ -2235,7 +2235,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
 
             if (_networkManager == null)
             {
-                MessageWindow.Show("No connection to server. Sale is not possible.");
+                MessageWindow.Show("未连接到服务器，无法出售物品。");
                 RestoreItemAfterCancelledSell(item, originalGrid, fromEquipSlot);
                 return;
             }
@@ -2243,7 +2243,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
             var definition = item.Definition;
             if (definition == null)
             {
-                MessageWindow.Show("Cannot identify the selected item.");
+                MessageWindow.Show("无法识别所选物品。");
                 RestoreItemAfterCancelledSell(item, originalGrid, fromEquipSlot);
                 return;
             }
@@ -2252,39 +2252,39 @@ namespace Client.Main.Controls.UI.Game.Inventory
 
             if (!definition.CanSellToNpc)
             {
-                MessageWindow.Show($"Item '{displayName}' cannot be sold to NPC shop.");
+                MessageWindow.Show($"物品“{displayName}”无法出售给 NPC 商店。");
                 RestoreItemAfterCancelledSell(item, originalGrid, fromEquipSlot);
                 return;
             }
 
             var builder = new StringBuilder();
-            builder.AppendLine($"Sell {displayName}?");
+            builder.AppendLine($"确定出售 {displayName} 吗？");
             if (definition.IsExpensive)
             {
                 builder.AppendLine();
-                builder.AppendLine("WARNING: This item is marked as expensive.");
+                builder.AppendLine("警告：该物品属于贵重物品！");
             }
 
             RequestDialog.Show(
                 builder.ToString(),
                 onAccept: () => ExecuteSellToNpc(slotIndex),
                 onReject: () => RestoreItemAfterCancelledSell(item, originalGrid, fromEquipSlot),
-                acceptText: "Sell",
-                rejectText: "Cancel");
+                acceptText: "出售",
+                rejectText: "取消");
         }
 
         private void ExecuteSellToNpc(byte slotIndex)
         {
             if (_networkManager == null)
             {
-                MessageWindow.Show("No connection to server. Sale is not possible.");
+                MessageWindow.Show("未连接到服务器，无法出售物品。");
                 return;
             }
 
             var svc = _networkManager.GetCharacterService();
             if (svc == null)
             {
-                MessageWindow.Show("Failed to connect to NPC shop server.");
+                MessageWindow.Show("连接 NPC 商店服务失败。");
                 return;
             }
 
@@ -2313,7 +2313,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
                         MuGame.ScheduleOnMainThread(refreshedState.RaiseInventoryChanged);
                     }
 
-                    MuGame.ScheduleOnMainThread(() => MessageWindow.Show("Failed to sell item. Please try again."));
+                    MuGame.ScheduleOnMainThread(() => MessageWindow.Show("出售物品失败，请重试。"));
                 }
             });
         }
@@ -2338,7 +2338,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
                 if (!TryFindFirstFreeSlot(item, out targetSlot))
                 {
                     _logger?.LogWarning("No free space to restore item '{Name}' in inventory.", item.Definition?.Name ?? "Unknown");
-                    MessageWindow.Show("No space in inventory to restore item.");
+                    MessageWindow.Show("背包空间不足，无法退回物品。");
                     return;
                 }
             }
@@ -2347,7 +2347,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
             if (!AddItem(item))
             {
                 _logger?.LogWarning("Failed to restore item '{Name}' to inventory.", item.Definition?.Name ?? "Unknown");
-                MessageWindow.Show("Restoring item to inventory failed.");
+                MessageWindow.Show("退回物品到背包失败。");
             }
         }
 
@@ -2866,7 +2866,7 @@ namespace Client.Main.Controls.UI.Game.Inventory
 
             if (type == 4 && !IsHeroInSafeZone(state))
             {
-                RequestDialog.ShowInfo("You can only use this item in a safe zone.");
+                RequestDialog.ShowInfo("该物品只能在安全区内使用。");
                 return true;
             }
 

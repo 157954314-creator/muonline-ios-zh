@@ -1077,11 +1077,7 @@ namespace Client.Main.Controls.UI.Game
                 var def = ItemDatabase.GetItemDefinition(data)
                     ?? new ItemDefinition(0, ItemDatabase.GetItemName(data) ?? "Unknown Item", 1, 1, "Interface/newui_item_box.tga");
 
-                var item = new InventoryItem(def, new Point(gridX, gridY), data);
-                if (data.Length > 2)
-                {
-                    item.Durability = data[2];
-                }
+                var item = new InventoryItem(def, new Point(gridX, gridY), data, ItemDatabase.GetItemDurability(data));
 
                 _items.Add(item);
             }

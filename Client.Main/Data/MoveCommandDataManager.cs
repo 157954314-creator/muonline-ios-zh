@@ -126,6 +126,14 @@ namespace Client.Main.Data
                     continue;
                 }
 
+                // Filter out debug/test "ForLosingZen" entries from movereq_eng.bmd (e.g. Silent Map? 20,000,000 Zen)
+                if (record.Index == 134 ||
+                    record.Main.Contains("ForLosingZen", StringComparison.OrdinalIgnoreCase) ||
+                    (record.Sub != null && record.Sub.Contains("Silent Map?", StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
                 var displayBase = string.IsNullOrWhiteSpace(record.Sub) ? record.Main : record.Sub;
                 var displayName = Localization.Loc.MapName(BuildDisplayName(displayBase));
                 var normalizedIndex = NormalizeWarpIndex(record);

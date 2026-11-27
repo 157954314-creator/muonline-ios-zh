@@ -138,6 +138,19 @@ namespace Client.Main.Controls.UI.Game.MuHelper
             _toggleBtnRect = new Rectangle(_settingsBtnRect.Right + gap, rect.Y + pad, btnW, btnH);
         }
 
+        private Texture2D? EnsureButtonTexture(ref Texture2D? field, string path)
+        {
+            if (field != null && !field.IsDisposed)
+                return field;
+            field = TextureLoader.Instance.GetTexture2D(path);
+            if (field == null || field.IsDisposed)
+            {
+                field = null;
+                _ = TextureLoader.Instance.Prepare(path);
+            }
+            return field;
+        }
+
         public override void Draw(GameTime gameTime)
         {
             if (Status != GameControlStatus.Ready || !Visible)
@@ -147,6 +160,10 @@ namespace Client.Main.Controls.UI.Game.MuHelper
             var pixel = GraphicsManager.Instance.Pixel;
             if (spriteBatch == null || pixel == null)
                 return;
+
+            var setupTex = EnsureButtonTexture(ref _setupTex, SetupTexturePath);
+            var startTex = EnsureButtonTexture(ref _startTex, StartTexturePath);
+            var stopTex = EnsureButtonTexture(ref _stopTex, StopTexturePath);
 
             SpriteBatchScope? scope = null;
             if (!SpriteBatchScope.BatchIsBegun)
@@ -173,11 +190,11 @@ namespace Client.Main.Controls.UI.Game.MuHelper
                 spriteBatch.Draw(pixel, new Rectangle(rect.X, inner.Y + 3, 1, Math.Max(1, inner.Height - 6)), ModernHudTheme.BorderInner * 0.45f * Alpha);
 
                 // Left button: Settings (Wrench)
-                DrawSpriteButton(spriteBatch, pixel, _setupTex, _settingsBtnRect, _hoverSettings, _pressSettings, new Color(75, 75, 78));
+                DrawSpriteButton(spriteBatch, pixel, setupTex, _settingsBtnRect, _hoverSettings, _pressSettings, new Color(75, 75, 78));
 
                 // Right button: Start (Orange Play) / Stop
                 bool running = _controller.IsRunning;
-                Texture2D? playTex = running ? _stopTex : _startTex;
+                Texture2D? playTex = running ? stopTex : startTex;
                 Color fallbackColor = running ? new Color(40, 140, 75) : new Color(185, 96, 18);
                 DrawSpriteButton(spriteBatch, pixel, playTex, _toggleBtnRect, _hoverToggle, _pressToggle, fallbackColor);
 

@@ -141,9 +141,9 @@ namespace Client.Main
         /// <summary>Gameplay worlds: soft glow around bright light (fire, spells, lamps) plus a light colour grade and vignette.</summary>
         public static bool ENABLE_WORLD_BLOOM = true;
         /// <summary>Per-map colour grade (tint, saturation, contrast, vignette) on top of the world glow.</summary>
-        public static bool ENABLE_MAP_COLOR_GRADE = true;
+        public static bool ENABLE_MAP_COLOR_GRADE = false;
         /// <summary>Ground-hugging height fog on worlds that define one.</summary>
-        public static bool ENABLE_HEIGHT_FOG = true;
+        public static bool ENABLE_HEIGHT_FOG = false;
         /// <summary>Screen-space ambient occlusion (half resolution, needs the world glow pass).</summary>
         public static bool ENABLE_SSAO;
         /// <summary>SSAO amount, 1 = default (0..2).</summary>

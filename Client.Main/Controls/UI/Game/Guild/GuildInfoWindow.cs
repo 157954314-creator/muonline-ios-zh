@@ -177,22 +177,22 @@ namespace Client.Main.Controls.UI.Game.Guild
 
         private void ConfirmLeave()
         {
-            string guild = _guilds.OwnGuild?.Name ?? "the guild";
-            RequestDialog.Show($"Do you really want to leave {guild}?",
+            string guild = _guilds.OwnGuild?.Name ?? "当前战盟";
+            RequestDialog.Show($"确定要退出战盟 {guild} 吗？",
                 onAccept: () => SendKick(OwnName));
         }
 
         private void ConfirmDisband()
         {
-            string guild = _guilds.OwnGuild?.Name ?? "your guild";
-            RequestDialog.Show($"Do you really want to disband {guild}? All members will be removed.",
+            string guild = _guilds.OwnGuild?.Name ?? "你的战盟";
+            RequestDialog.Show($"确定要解散战盟 {guild} 吗？所有成员将被移除。",
                 onAccept: () => SendKick(OwnName));
         }
 
         private void ConfirmKick()
         {
             if (GetSelectedMember() is not { } member) return;
-            RequestDialog.Show($"Remove {member.Name} from the guild?",
+            RequestDialog.Show($"确定将 {member.Name} 移出战盟吗？",
                 onAccept: () => SendKick(member.Name));
         }
 

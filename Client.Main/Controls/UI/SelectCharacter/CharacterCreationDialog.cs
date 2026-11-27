@@ -189,44 +189,44 @@ namespace Client.Main.Controls.UI.SelectCharacter
                 new CharacterClassInfo 
                 { 
                     Class = CharacterClassNumber.DarkWizard, 
-                    Name = "Dark Wizard",
-                    Description = "Masters of magical destruction.\nHigh magic damage, low defense."
+                    Name = "魔法师",
+                    Description = "元素与毁灭魔法的掌控者。\n法术伤害极高，防御较弱。"
                 },
                 new CharacterClassInfo 
                 { 
                     Class = CharacterClassNumber.DarkKnight, 
-                    Name = "Dark Knight",
-                    Description = "Warriors of strength and honor.\nHigh health and physical damage."
+                    Name = "剑士",
+                    Description = "力量与荣耀的近战勇士。\n生命值与物理攻击力出众。"
                 },
                 new CharacterClassInfo 
                 { 
                     Class = CharacterClassNumber.FairyElf, 
-                    Name = "Fairy Elf",
-                    Description = "Agile archers and healers.\nHigh agility, support abilities."
+                    Name = "弓箭手",
+                    Description = "敏捷的远程射手与辅助。\n高攻速与强力团队增益。"
                 },
                 new CharacterClassInfo 
                 { 
                     Class = CharacterClassNumber.MagicGladiator, 
-                    Name = "Magic Gladiator",
-                    Description = "Hybrid warriors with magic.\nBalanced melee and magic skills."
+                    Name = "魔剑士",
+                    Description = "剑与魔法兼修的混战强者。\n物理与法术技能均衡发展。"
                 },
                 new CharacterClassInfo 
                 { 
                     Class = CharacterClassNumber.DarkLord, 
-                    Name = "Dark Lord",
-                    Description = "Commanders with dark powers.\nSummons pets and commands armies."
+                    Name = "圣导师",
+                    Description = "统御暗黑与圣光之力的领袖。\n可召唤战宠并统率战盟。"
                 },
                 new CharacterClassInfo 
                 { 
                     Class = CharacterClassNumber.Summoner, 
-                    Name = "Summoner",
-                    Description = "Mystics with curse powers.\nCurses enemies and summons."
+                    Name = "召唤术士",
+                    Description = "精通诅咒与幻兽的神秘术士。\n擅长削弱敌人与持续爆发。"
                 },
                 new CharacterClassInfo 
                 { 
                     Class = CharacterClassNumber.RageFighter, 
-                    Name = "Rage Fighter",
-                    Description = "Hand-to-hand combat masters.\nHighest HP, powerful combos."
+                    Name = "格斗家",
+                    Description = "近身格斗与体术宗师。\n超高生命与强力连击。"
                 }
             };
 
@@ -404,7 +404,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             // Title
             _titleLabel = new LabelControl
             {
-                Text = "CREATE CHARACTER",
+                Text = "创建角色",
                 FontSize = 20f,
                 TextColor = Theme.TextGold,
                 Align = ControlAlign.Top | ControlAlign.HorizontalCenter,
@@ -415,7 +415,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             // Character name input label
             _nameLabel = new LabelControl
             {
-                Text = "Character Name:",
+                Text = "角色名称:",
                 FontSize = 13f,
                 TextColor = Theme.TextWhite,
                 X = 50,
@@ -429,7 +429,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             _nameInput.Y = 100;
             _nameInput.ViewSize = new Point(550, 36);
             _nameInput.FontSize = 8f;
-            _nameInput.Placeholder = "Enter name (3-10 chars)...";
+            _nameInput.Placeholder = "请输入角色名 (3-10个字符)...";
             _nameInput.Skin = TextFieldSkin.Flat;
             _nameInput.TextColor = Theme.TextWhite;
             _nameInput.BackgroundColor = Theme.BgDark;
@@ -441,7 +441,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             // Class selection section
             _classSectionLabel = new LabelControl
             {
-                Text = "Select Class:",
+                Text = "选择职业:",
                 FontSize = 13f,
                 TextColor = Theme.TextWhite,
                 X = 50,
@@ -465,7 +465,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             // Class name label
             _classLabel = new LabelControl
             {
-                Text = "Dark Wizard",
+                Text = "魔法师",
                 FontSize = 18f,
                 TextColor = Theme.TextGold,
                 Align = ControlAlign.HorizontalCenter,
@@ -487,7 +487,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             Controls.Add(_classDescriptionLabel);
 
             // Create button
-            _createButton = CreateModernButton("CREATE CHARACTER", Theme.Success);
+            _createButton = CreateModernButton("创建角色", Theme.Success);
             _createButton.X = 50;
             _createButton.Y = 380;
             _createButton.ViewSize = new Point(260, 40);
@@ -495,7 +495,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             Controls.Add(_createButton);
 
             // Cancel button
-            _cancelButton = CreateModernButton("CANCEL", Theme.BgLight);
+            _cancelButton = CreateModernButton("取消", Theme.BgLight);
             _cancelButton.X = 340;
             _cancelButton.Y = 380;
             _cancelButton.ViewSize = new Point(260, 40);
@@ -580,19 +580,19 @@ namespace Client.Main.Controls.UI.SelectCharacter
             
             if (string.IsNullOrWhiteSpace(characterName))
             {
-                MessageWindow.Show("Please enter a character name.");
+                MessageWindow.Show("请输入角色名称。");
                 return;
             }
 
             if (characterName.Length < 3)
             {
-                MessageWindow.Show("Character name must be at least 3 characters long.");
+                MessageWindow.Show("角色名称长度不能少于 3 个字符。");
                 return;
             }
 
             if (characterName.Length > 10)
             {
-                MessageWindow.Show("Character name must be 10 characters or less.");
+                MessageWindow.Show("角色名称长度不能超过 10 个字符。");
                 return;
             }
 

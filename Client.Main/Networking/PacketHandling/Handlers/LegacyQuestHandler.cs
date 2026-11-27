@@ -143,7 +143,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     MuGame.ScheduleOnMainThread(() =>
                     {
                         var scene = MuGame.Instance?.ActiveScene as GameScene;
-                        scene?.ChatLog?.AddMessage("System", "Quest: progress updated.", MessageType.System);
+                        scene?.ChatLog?.AddMessage("System", "任务进度已更新。", MessageType.System);
 
                         var questDialog = QuestDialogControl.Instance;
                         questDialog.ShowInfo(questData);
@@ -159,8 +159,8 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                             QuestIndex = res.QuestIndex,
                             Title = GetQuestTitle(res.QuestIndex),
                             NpcName = GetNpcName(res.QuestIndex),
-                            Description = $"Quest action failed (code {res.Result}).\\nPlease check requirements (Zen/items/level).",
-                            StateText = "Failed",
+                            Description = $"任务操作失败（错误码 {res.Result}）。\n请检查等级、金币和任务物品是否满足要求。",
+                            StateText = "失败",
                             State = LegacyQuestState.Undefined,
                             CanProceed = false
                         };
@@ -193,12 +193,12 @@ namespace Client.Main.Networking.PacketHandling.Handlers
 
                 string msg = reward.Reward switch
                 {
-                    LegacyQuestReward.QuestRewardType.LevelUpPoints => $"Quest reward: +{reward.Count} stat points.",
-                    LegacyQuestReward.QuestRewardType.CharacterEvolutionFirstToSecond => "Quest reward: class change (1st → 2nd).",
-                    LegacyQuestReward.QuestRewardType.LevelUpPointsPerLevelIncrease => $"Quest reward: bonus points per level (value={reward.Count}).",
-                    LegacyQuestReward.QuestRewardType.ComboSkill => "Quest reward: combo skill unlocked.",
-                    LegacyQuestReward.QuestRewardType.CharacterEvolutionSecondToThird => "Quest reward: class change (2nd → 3rd).",
-                    _ => $"Quest reward: {reward.Reward} (value={reward.Count})."
+                    LegacyQuestReward.QuestRewardType.LevelUpPoints => $"任务奖励：获得 +{reward.Count} 点属性点。",
+                    LegacyQuestReward.QuestRewardType.CharacterEvolutionFirstToSecond => "任务奖励：恭喜完成一转！",
+                    LegacyQuestReward.QuestRewardType.LevelUpPointsPerLevelIncrease => $"任务奖励：每级额外属性点提升（+{reward.Count}）。",
+                    LegacyQuestReward.QuestRewardType.ComboSkill => "任务奖励：已解锁连击技能！",
+                    LegacyQuestReward.QuestRewardType.CharacterEvolutionSecondToThird => "任务奖励：恭喜完成三转晋升大师！",
+                    _ => $"任务奖励：{reward.Reward}（数量={reward.Count}）。"
                 };
                 bool playRewardSound = reward.Reward is
                     LegacyQuestReward.QuestRewardType.LevelUpPoints or
@@ -251,7 +251,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                 {
                     requirements.Add(new QuestDialogControl.QuestRequirement
                     {
-                        Label = "Level",
+                        Label = "等级",
                         CurrentValue = characterState.Level.ToString(),
                         RequiredValue = minLevel.ToString(),
                         IsMet = characterState.Level >= minLevel
@@ -263,7 +263,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                 {
                     requirements.Add(new QuestDialogControl.QuestRequirement
                     {
-                        Label = "Zen",
+                        Label = "金币",
                         CurrentValue = FormatZen((uint)characterState.InventoryZen),
                         RequiredValue = FormatZen(minZen),
                         IsMet = characterState.InventoryZen >= minZen
@@ -276,7 +276,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     var prereqState = characterState.GetLegacyQuestState(prerequisiteQuestIndex.Value);
                     requirements.Add(new QuestDialogControl.QuestRequirement
                     {
-                        Label = $"Quest: {GetQuestTitle(prerequisiteQuestIndex.Value)}",
+                        Label = $"前置任务：{GetQuestTitle(prerequisiteQuestIndex.Value)}",
                         CurrentValue = FormatState(prereqState),
                         RequiredValue = FormatState(prerequisiteState),
                         IsMet = prereqState == prerequisiteState
@@ -309,48 +309,48 @@ namespace Client.Main.Networking.PacketHandling.Handlers
 
         private static string GetQuestTitle(byte questIndex) => questIndex switch
         {
-            0 => "Sebina: Scroll of Emperor",
-            1 => "Sebina: Three Treasures of Mu",
-            2 => "Marlon: Ring of Glory",
-            3 => "Marlon: Dark Stone",
-            4 => "Devin: Certificate of Strength",
-            5 => "Devin: Infiltration of Barracks of Balgass",
-            6 => "Devin: Into The Darkness (Balgass Refuge)",
-            _ => $"Legacy Quest #{questIndex}"
+            0 => "塞维娜：寻找帝王之书",
+            1 => "塞维娜：奇迹三宝（一转）",
+            2 => "马隆：荣誉戒指",
+            3 => "马隆：暗黑之石（连击）",
+            4 => "弟子黛彬：强者的证明",
+            5 => "弟子黛彬：潜入巴卡斯兵营",
+            6 => "弟子黛彬：深入黑暗（三转）",
+            _ => $"转职任务 #{questIndex}"
         };
 
         private static string GetQuestDescription(byte questIndex) => questIndex switch
         {
             0 =>
-                "Pay Zen to hear the story, then hunt and find the Scroll of Emperor.\\n" +
-                "Bring it back to Sebina to proceed.",
+                "支付金币接取任务，前往打怪寻找帝王之书。\n" +
+                "集齐后带回交给圣导士塞维娜。",
             1 =>
-                "Pay Zen to receive the task.\\n" +
-                "Find the appropriate treasure for your class and return to Sebina.\\n" +
-                "Reward: class change (1st -> 2nd).",
+                "支付金币接取任务。\n" +
+                "寻找对应职业的专属转职宝物并交回塞维娜。\n" +
+                "奖励：完成第一次转职。",
             2 =>
-                "Pay Zen to accept the quest.\\n" +
-                "Find the Ring of Glory and return to Marlon.",
+                "支付金币接取任务。\n" +
+                "寻找荣誉戒指并带回交给警卫队长马隆。",
             3 =>
-                "After completing the Ring of Glory quest, find the Dark Stone and return to Marlon.\\n" +
-                "Reward: combo skill (for eligible classes).",
+                "完成荣誉戒指任务后，寻找暗黑之石并交回马隆。\n" +
+                "奖励：解锁连击技能（剑士专属）。",
             4 =>
-                "Bring the required items to Priest Devin and pay Zen to proceed.",
+                "收集三转所需的三件神圣遗物，并支付金币交给弟子黛彬。",
             5 =>
-                "Enter the Barracks of Balgass and defeat the required monsters.\\n" +
-                "Reward: additional stat points.",
+                "进入巴卡斯兵营，击败指定数量的怪物。\n" +
+                "奖励：获得额外属性点。",
             6 =>
-                "Enter the Refuge of Balgass and defeat the Dark Elf (Hero).\\n" +
-                "Reward: class change (2nd -> 3rd) + additional stat points.",
-            _ => "No description for this quest in this client."
+                "进入巴卡斯休息室，击败暗黑精灵。\n" +
+                "奖励：完成第三次转职（大师职业）与额外属性点。",
+            _ => "暂无该任务的详细说明。"
         };
 
         private static string GetNpcName(byte questIndex) => questIndex switch
         {
-            0 or 1 => "Priestess Sevina",
-            2 or 3 => "Marlon",
-            4 or 5 or 6 => "Priest Devin",
-            _ => "Unknown NPC"
+            0 or 1 => "圣导士塞维娜",
+            2 or 3 => "警卫队长马隆",
+            4 or 5 or 6 => "弟子黛彬",
+            _ => "未知 NPC"
         };
 
         /// <summary>
@@ -370,7 +370,8 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     items.Add(CreateQuestItem(
                         requiredCount: 1,
                         fallbackGroup: questItemGroup,
-                        fallbackId: 19,
+                        fallbackId: 23,
+                        displayNameZh: "帝王之书",
                         "Scroll of the Emperor",
                         "Scroll of Emperor"));
                     break;
@@ -387,8 +388,9 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                 case 2: // Marlon - Ring of Glory
                     items.Add(CreateQuestItem(
                         requiredCount: 1,
-                        fallbackGroup: 13,
-                        fallbackId: 20,
+                        fallbackGroup: questItemGroup,
+                        fallbackId: 23,
+                        displayNameZh: "荣誉戒指",
                         "Ring of Glory",
                         "Ring of Honor"));
                     break;
@@ -397,7 +399,8 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     items.Add(CreateQuestItem(
                         requiredCount: 1,
                         fallbackGroup: questItemGroup,
-                        fallbackId: 31,
+                        fallbackId: 24,
+                        displayNameZh: "暗黑之石",
                         "Dark Stone"));
                     break;
 
@@ -406,20 +409,23 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     items.Add(CreateQuestItem(
                         requiredCount: 1,
                         fallbackGroup: questItemGroup,
-                        fallbackId: 20,
+                        fallbackId: 65,
+                        displayNameZh: "炽炎魔的火种",
                         "Flame of Death Beam Knight",
                         "Death-beam Knight Flame",
                         "Death Beam Knight Flame"));
                     items.Add(CreateQuestItem(
                         requiredCount: 1,
                         fallbackGroup: questItemGroup,
-                        fallbackId: 21,
+                        fallbackId: 66,
+                        displayNameZh: "丛林召唤者的角",
                         "Horn of Hell Maine",
                         "Hell-Miner Horn"));
                     items.Add(CreateQuestItem(
                         requiredCount: 1,
                         fallbackGroup: questItemGroup,
-                        fallbackId: 22,
+                        fallbackId: 67,
+                        displayNameZh: "天魔菲尼斯的羽毛",
                         "Feather of Dark Phoenix",
                         "Dark Phoenix Feather"));
                     break;
@@ -430,7 +436,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
             return items;
         }
 
-        private static QuestDialogControl.QuestItem CreateQuestItem(int requiredCount, byte fallbackGroup, short fallbackId, params string[] candidateNames)
+        private static QuestDialogControl.QuestItem CreateQuestItem(int requiredCount, byte fallbackGroup, short fallbackId, string displayNameZh, params string[] candidateNames)
         {
             if (candidateNames != null)
             {
@@ -440,7 +446,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     {
                         return new QuestDialogControl.QuestItem
                         {
-                            Name = def.Name,
+                            Name = Localization.Loc.IsChinese && !string.IsNullOrEmpty(displayNameZh) ? displayNameZh : def.Name,
                             Group = (byte)def.Group,
                             Id = (short)def.Id,
                             RequiredCount = requiredCount
@@ -451,7 +457,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
 
             return new QuestDialogControl.QuestItem
             {
-                Name = candidateNames?.FirstOrDefault() ?? "Unknown Item",
+                Name = Localization.Loc.IsChinese && !string.IsNullOrEmpty(displayNameZh) ? displayNameZh : (candidateNames?.FirstOrDefault() ?? "未知物品"),
                 Group = fallbackGroup,
                 Id = fallbackId,
                 RequiredCount = requiredCount
@@ -472,7 +478,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                 CharacterClassNumber.DarkWizard or
                 CharacterClassNumber.SoulMaster or
                 CharacterClassNumber.GrandMaster
-                    => CreateQuestItem(1, questItemGroup, 18,
+                    => CreateQuestItem(1, questItemGroup, 24, "先知之魂",
                         "Soul of Wizard",
                         "Soul Shard of Wizard",
                         "Soul of the Wizard",
@@ -481,17 +487,17 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                 CharacterClassNumber.DarkKnight or
                 CharacterClassNumber.BladeKnight or
                 CharacterClassNumber.BladeMaster
-                    => CreateQuestItem(1, questItemGroup, 17, "Broken Sword"),
+                    => CreateQuestItem(1, questItemGroup, 24, "断魂之剑", "Broken Sword"),
 
                 CharacterClassNumber.FairyElf or
                 CharacterClassNumber.MuseElf or
                 CharacterClassNumber.HighElf
-                    => CreateQuestItem(1, questItemGroup, 16, "Tear of Elf", "Tear of the Elf"),
+                    => CreateQuestItem(1, questItemGroup, 24, "精灵之泪", "Tear of Elf", "Tear of the Elf"),
 
                 CharacterClassNumber.Summoner or
                 CharacterClassNumber.BloodySummoner or
                 CharacterClassNumber.DimensionMaster
-                    => CreateQuestItem(1, questItemGroup, 68, "Abyssal Eye", "Eye of Abyssal"),
+                    => CreateQuestItem(1, questItemGroup, 68, "深渊之眼", "Abyssal Eye", "Eye of Abyssal"),
 
                 _ => null
             };
@@ -551,7 +557,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     int count = CountItemsInInventory(characterState, item.Group, item.Id);
                     if (count < item.RequiredCount)
                     {
-                        blockReason = $"Missing item: {item.Name}";
+                        blockReason = $"缺少任务物品：{item.Name}";
                         return false;
                     }
                 }
@@ -562,10 +568,10 @@ namespace Client.Main.Networking.PacketHandling.Handlers
 
         private static string FormatState(LegacyQuestState state) => state switch
         {
-            LegacyQuestState.Inactive => "Inactive",
-            LegacyQuestState.Active => "In progress",
-            LegacyQuestState.Complete => "Completed",
-            LegacyQuestState.Undefined => "Unavailable",
+            LegacyQuestState.Inactive => "未接取",
+            LegacyQuestState.Active => "进行中",
+            LegacyQuestState.Complete => "已完成",
+            LegacyQuestState.Undefined => "不可用",
             _ => state.ToString()
         };
 
@@ -579,13 +585,13 @@ namespace Client.Main.Networking.PacketHandling.Handlers
 
             if (minLevel > 0 && characterState.Level < minLevel)
             {
-                error = $"Requirement not met: Level {minLevel}+ required.";
+                error = $"条件未满足：需要达到 {minLevel} 级。";
                 return false;
             }
 
             if (minZen > 0 && characterState.InventoryZen < minZen)
             {
-                error = $"Requirement not met: {FormatZen(minZen)} Zen required.";
+                error = $"条件未满足：需要 {FormatZen(minZen)} 金币。";
                 return false;
             }
 
@@ -594,7 +600,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                 var st = characterState.GetLegacyQuestState(prerequisiteQuestIndex.Value);
                 if (st != prerequisiteState)
                 {
-                    error = $"Requirement not met: {GetQuestTitle(prerequisiteQuestIndex.Value)} must be {FormatState(prerequisiteState)}.";
+                    error = $"条件未满足：需先完成前置任务“{GetQuestTitle(prerequisiteQuestIndex.Value)}”。";
                     return false;
                 }
             }

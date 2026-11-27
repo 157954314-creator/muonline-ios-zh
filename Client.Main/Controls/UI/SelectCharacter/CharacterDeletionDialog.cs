@@ -166,7 +166,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             // Title
             _titleLabel = new LabelControl
             {
-                Text = "DELETE CHARACTER",
+                Text = "删除角色",
                 FontSize = 20f,
                 TextColor = Theme.Danger,
                 Align = ControlAlign.Top | ControlAlign.HorizontalCenter,
@@ -177,7 +177,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             // Warning message
             _messageLabel = new LabelControl
             {
-                Text = $"Are you sure you want to delete '{_characterName}'?\n\nThis action cannot be undone!\n\nEnter your security code to confirm:",
+                Text = $"确定要删除角色“{_characterName}”吗？\n\n此操作不可恢复！\n\n请输入安全码确认：",
                 FontSize = 13f,
                 TextColor = Theme.TextWhite,
                 Align = ControlAlign.Top | ControlAlign.HorizontalCenter,
@@ -190,7 +190,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             // Security code label
             _securityCodeLabel = new LabelControl
             {
-                Text = "Security Code:",
+                Text = "安全码:",
                 FontSize = 13f,
                 TextColor = Theme.TextWhite,
                 X = 50,
@@ -205,7 +205,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
                 Y = 230,
                 ViewSize = new Point(450, 36),
                 MaxLength = 20,
-                PlaceholderText = "Enter security code...",
+                PlaceholderText = "请输入安全码...",
                 FontSize = 8f,
                 BackgroundColor = Theme.BgDark,
                 TextColor = Theme.TextWhite,
@@ -216,7 +216,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             _securityCodeInput.Focus();
 
             // Delete button
-            _confirmButton = CreateModernButton("DELETE CHARACTER", Theme.Danger);
+            _confirmButton = CreateModernButton("确认删除", Theme.Danger);
             _confirmButton.X = 50;
             _confirmButton.Y = 300;
             _confirmButton.ViewSize = new Point(220, 40);
@@ -224,7 +224,7 @@ namespace Client.Main.Controls.UI.SelectCharacter
             Controls.Add(_confirmButton);
 
             // Cancel button
-            _cancelButton = CreateModernButton("CANCEL", Theme.BgLight);
+            _cancelButton = CreateModernButton("取消", Theme.BgLight);
             _cancelButton.X = 280;
             _cancelButton.Y = 300;
             _cancelButton.ViewSize = new Point(220, 40);

@@ -970,15 +970,16 @@ namespace Client.Main.Controls.UI.Game.Hud
 
         private static string GetCompanionName(int itemId, string? defaultName)
         {
+            bool zh = Localization.Loc.IsChinese;
             return itemId switch
             {
-                0 => "Guardian Angel",
-                1 => "Imp",
-                2 => "Uniria",
-                3 => "Dinorant",
-                4 => "Dark Horse",
-                5 => "Dark Raven",
-                _ => string.IsNullOrWhiteSpace(defaultName) ? "Companion" : defaultName
+                0 => zh ? "守护天使" : "Guardian Angel",
+                1 => zh ? "小恶魔" : "Imp",
+                2 => zh ? "独角兽" : "Uniria",
+                3 => zh ? "彩云兽" : "Dinorant",
+                4 => zh ? "黑王马" : "Dark Horse",
+                5 => zh ? "天鹰" : "Dark Raven",
+                _ => string.IsNullOrWhiteSpace(defaultName) ? (zh ? "宠物" : "Companion") : defaultName
             };
         }
 
@@ -1020,7 +1021,7 @@ namespace Client.Main.Controls.UI.Game.Hud
             if (count == 0)
                 return;
 
-            int barHeight = 13;
+            int barHeight = 15;
             int barGap = 6;
             int barWidth = Math.Clamp((int)(_panelRect.Width * 0.12f), 120, 156);
             int totalWidth = (count * barWidth) + ((count - 1) * barGap);
@@ -1062,11 +1063,12 @@ namespace Client.Main.Controls.UI.Game.Hud
             }
 
             string text = $"{info.Name} {info.Current}/{info.Maximum}";
-            float scale = 0.32f;
+            float scale = 0.34f;
             Vector2 size = _font!.MeasureString(text) * scale;
+            float opticalY = Localization.Loc.IsChinese ? -size.Y * 0.10f : 0f;
             Vector2 textPos = new(
                 rect.X + (rect.Width - size.X) * 0.5f,
-                rect.Y + (rect.Height - size.Y) * 0.5f);
+                rect.Y + (rect.Height - size.Y) * 0.5f + opticalY);
 
             sb.DrawString(_font, text, textPos + Vector2.One,
                 Color.Black * 0.8f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);

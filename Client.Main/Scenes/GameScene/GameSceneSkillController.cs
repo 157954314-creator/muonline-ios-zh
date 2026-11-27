@@ -252,9 +252,9 @@ namespace Client.Main.Scenes
             }
             if (IsAreaSkill(skill.SkillId))
             {
-                if (skill.SkillId == HellFireSkillId || skill.SkillId == InfernoSkillId || skill.SkillId == EvilSpiritSkillId)
+                if (skill.SkillId is HellFireSkillId or InfernoSkillId or EvilSpiritSkillId or 41 or 330 or 332 or 481)
                 {
-                    UseAreaSkill(skill);
+                    UseAreaSkill(skill, hoveredTarget?.NetworkId ?? 0);
                     _scene.SetMouseInputConsumed();
                     return;
                 }
@@ -840,7 +840,7 @@ namespace Client.Main.Scenes
                 return false;
 
             Vector2 targetTile = hero.Location;
-            if (skill.SkillId != HellFireSkillId && skill.SkillId != InfernoSkillId && skill.SkillId != EvilSpiritSkillId)
+            if (skill.SkillId is not (HellFireSkillId or InfernoSkillId or EvilSpiritSkillId or 41 or 330 or 332 or 481))
             {
                 if (targetLocationOverride.HasValue)
                 {
@@ -883,6 +883,8 @@ namespace Client.Main.Scenes
 
             if (UsesCasterTileForAreaRequest(skill.SkillId))
             {
+                if (skill.SkillId is 41 or 330 or 332 or 481)
+                    hero.StopMovement();
                 requestTargetX = (byte)Math.Clamp((int)hero.Location.X, 0, Constants.TERRAIN_SIZE - 1);
                 requestTargetY = (byte)Math.Clamp((int)hero.Location.Y, 0, Constants.TERRAIN_SIZE - 1);
             }
@@ -1010,7 +1012,7 @@ namespace Client.Main.Scenes
 
         // These skills aim at the selected tile but send the caster's tile in the request.
         private static bool UsesCasterTileForAreaRequest(ushort skillId) =>
-            skillId is TwisterSkillId or 236 or 237 or 76 or 230 or 456 or 24 or 52; // 24 / 52: caster tile + angle + target key; 237: ZzzInterface.cpp:5516
+            skillId is TwisterSkillId or 41 or 330 or 332 or 481 or 236 or 237 or 76 or 230 or 456 or 24 or 52; // 41: Twisting Slash; 24 / 52: caster tile + angle + target key; 237: ZzzInterface.cpp:5516
 
         private static bool IsDrainLife(ushort skillId) => skillId is 214 or 458;
 

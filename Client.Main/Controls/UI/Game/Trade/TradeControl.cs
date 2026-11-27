@@ -1636,11 +1636,7 @@ namespace Client.Main.Controls.UI.Game.Trade
                 var def = ItemDatabase.GetItemDefinition(data)
                     ?? new ItemDefinition(0, ItemDatabase.GetItemName(data) ?? "Unknown Item", 1, 1, "Interface/newui_item_box.tga");
 
-                var item = new InventoryItem(def, new Point(gridX, gridY), data);
-                if (data.Length > 2)
-                {
-                    item.Durability = data[2];
-                }
+                var item = new InventoryItem(def, new Point(gridX, gridY), data, ItemDatabase.GetItemDurability(data));
 
                 _partnerItems.Add(item);
                 PlaceItemOnGrid(_partnerGrid, item, item.GridPosition);
@@ -1661,11 +1657,7 @@ namespace Client.Main.Controls.UI.Game.Trade
                 var def = ItemDatabase.GetItemDefinition(data)
                     ?? new ItemDefinition(0, ItemDatabase.GetItemName(data) ?? "Unknown Item", 1, 1, "Interface/newui_item_box.tga");
 
-                var item = new InventoryItem(def, new Point(gridX, gridY), data);
-                if (data.Length > 2)
-                {
-                    item.Durability = data[2];
-                }
+                var item = new InventoryItem(def, new Point(gridX, gridY), data, ItemDatabase.GetItemDurability(data));
 
                 _myItems.Add(item);
                 PlaceItemOnGrid(_myGrid, item, item.GridPosition);

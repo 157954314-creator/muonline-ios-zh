@@ -152,9 +152,9 @@ namespace Client.Main.Controls.UI.Game.Hud
             _state = state;
             _messageTemplate = state switch
             {
-                UpdateMiniGameState.MiniGameTypeState.DevilSquareClosed => "You will enter Devil Square (in {0} seconds).",
-                UpdateMiniGameState.MiniGameTypeState.DevilSquareOpened => "The gate of Devil Square will close down in {0} seconds.",
-                UpdateMiniGameState.MiniGameTypeState.DevilSquareRunning => "The gate of Devil Square is closing down ({0} seconds remaining).",
+                UpdateMiniGameState.MiniGameTypeState.DevilSquareClosed => "将在 {0} 秒后进入恶魔广场。",
+                UpdateMiniGameState.MiniGameTypeState.DevilSquareOpened => "恶魔广场入口将在 {0} 秒后关闭。",
+                UpdateMiniGameState.MiniGameTypeState.DevilSquareRunning => "恶魔广场即将关闭（剩余 {0} 秒）。",
                 _ => string.Empty
             };
 
