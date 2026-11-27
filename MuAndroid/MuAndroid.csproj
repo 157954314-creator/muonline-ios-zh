@@ -36,6 +36,7 @@
     <RunAOTCompilation>false</RunAOTCompilation>
     <EnableLLVM>false</EnableLLVM>
     <PublishTrimmed>false</PublishTrimmed>
+    <UseInterpreter>true</UseInterpreter>
   </PropertyGroup>
 
   <!--
