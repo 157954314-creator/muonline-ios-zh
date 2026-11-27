@@ -571,7 +571,10 @@ namespace Client.Main
 
             AppSettings.Ui ??= new UiSettings();
             UiThemeManager.ConfigurePersistence(PersistUiTheme);
-            UiThemeManager.Initialize(AppSettings.Ui.Theme, bootLogger);
+            string initialTheme = (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+                ? nameof(UiThemeId.Classic)
+                : AppSettings.Ui.Theme;
+            UiThemeManager.Initialize(initialTheme, bootLogger);
             AppSettings.Ui.Theme = UiThemeManager.CurrentId.ToString();
 
             // --- Initialize Network Manager ---
