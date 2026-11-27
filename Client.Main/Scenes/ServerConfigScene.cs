@@ -358,83 +358,56 @@ namespace Client.Main.Scenes
 
         private void ApplyThemeLayout()
         {
-            bool classic = UiThemeManager.CurrentId == UiThemeId.Classic;
-            ControlSize = classic ? new Point(420, 260) : new Point(400, 220);
+            // Always use the self-drawn bordered inputs & visible green "连接" button
+            // because Season 6 Data lacks Season 20 GFx textures (ok_btn.ozd / popup_line_m.ozd).
+            ControlSize = new Point(420, 260);
             ViewSize = ControlSize;
 
-            _titleLabel.TextColor = classic ? ModernHudTheme.TextWhite : new Color(241, 188, 37);
-            _hostLabel.TextColor = classic ? ModernHudTheme.TextWhite : Color.LightGray;
-            _portLabel.TextColor = classic ? ModernHudTheme.TextWhite : Color.LightGray;
-            _errorLabel.TextColor = classic ? ModernHudTheme.Danger : Color.OrangeRed;
-            _separator.Visible = !classic;
+            _titleLabel.TextColor = ModernHudTheme.TextGold;
+            _hostLabel.TextColor = ModernHudTheme.TextWhite;
+            _portLabel.TextColor = ModernHudTheme.TextWhite;
+            _errorLabel.TextColor = ModernHudTheme.Danger;
+            _separator.Visible = false;
 
-            if (classic)
-            {
-                _titleLabel.Y = 16;
-                _separator.X = 14;
-                _separator.Y = 46;
-                _separator.ViewSize = new Point(ControlSize.X - 28, 1);
+            _titleLabel.Y = 18;
 
-                _hostLabel.X = 30;
-                _hostLabel.Y = 82;
-                _portLabel.X = 30;
-                _portLabel.Y = 126;
-                _hostInput.X = 120;
-                _hostInput.Y = 76;
-                _hostInput.ViewSize = new Point(270, 32);
-                _portInput.X = 120;
-                _portInput.Y = 120;
-                _portInput.ViewSize = new Point(150, 32);
-                _hostInput.Skin = TextFieldSkin.Flat;
-                _portInput.Skin = TextFieldSkin.Flat;
-                _hostInput.BackgroundColor = ModernHudTheme.BgDarkest;
-                _portInput.BackgroundColor = ModernHudTheme.BgDarkest;
-                _hostInput.BorderColor = ModernHudTheme.BorderInner;
-                _portInput.BorderColor = ModernHudTheme.BorderInner;
-                _hostInput.TextColor = ModernHudTheme.TextWhite;
-                _portInput.TextColor = ModernHudTheme.TextWhite;
+            _hostLabel.X = 24;
+            _hostLabel.Y = 82;
+            _portLabel.X = 24;
+            _portLabel.Y = 128;
 
-                _errorLabel.X = 30;
-                _errorLabel.Y = 164;
-                _errorLabel.ViewSize = new Point(ControlSize.X - 60, 20);
-                _okButton.Visible = false;
-                _classicOkButton.Visible = true;
-                _classicOkButton.X = 135;
-                _classicOkButton.Y = 204;
-                _classicOkButton.ViewSize = new Point(150, 36);
-                _classicOkButton.BackgroundColor = ModernHudTheme.Success;
-                _classicOkButton.HoverBackgroundColor = Color.Lerp(ModernHudTheme.Success, Color.White, 0.15f);
-                _classicOkButton.PressedBackgroundColor = Color.Lerp(ModernHudTheme.Success, Color.Black, 0.15f);
-                _classicOkButton.BorderColor = ModernHudTheme.BorderInner;
-            }
-            else
-            {
-                _titleLabel.Y = 12;
-                _separator.X = 12;
-                _separator.Y = 40;
-                _separator.ViewSize = new Point(ControlSize.X - 24, 6);
+            _hostInput.X = 118;
+            _hostInput.Y = 76;
+            _hostInput.ControlSize = new Point(272, 34);
+            _hostInput.ViewSize = _hostInput.ControlSize;
+            _portInput.X = 118;
+            _portInput.Y = 122;
+            _portInput.ControlSize = new Point(150, 34);
+            _portInput.ViewSize = _portInput.ControlSize;
 
-                _hostLabel.X = 26;
-                _hostLabel.Y = 72;
-                _portLabel.X = 26;
-                _portLabel.Y = 108;
-                _hostInput.X = 110;
-                _hostInput.Y = 68;
-                _hostInput.ControlSize = new Point(240, 30);
-                _portInput.X = 110;
-                _portInput.Y = 104;
-                _portInput.ControlSize = new Point(120, 30);
-                _hostInput.Skin = TextFieldSkin.NineSlice;
-                _portInput.Skin = TextFieldSkin.NineSlice;
-                _hostInput.TextColor = Color.White;
-                _portInput.TextColor = Color.White;
-                _errorLabel.X = 26;
-                _errorLabel.Y = 140;
-                _errorLabel.ViewSize = new Point(ControlSize.X - 60, 20);
-                _okButton.Visible = true;
-                _okButton.Y = 170;
-                _classicOkButton.Visible = false;
-            }
+            _hostInput.Skin = TextFieldSkin.Flat;
+            _portInput.Skin = TextFieldSkin.Flat;
+            _hostInput.BackgroundColor = ModernHudTheme.BgDarkest;
+            _portInput.BackgroundColor = ModernHudTheme.BgDarkest;
+            _hostInput.BorderColor = ModernHudTheme.BorderInner;
+            _portInput.BorderColor = ModernHudTheme.BorderInner;
+            _hostInput.TextColor = ModernHudTheme.TextWhite;
+            _portInput.TextColor = ModernHudTheme.TextWhite;
+
+            _errorLabel.X = 28;
+            _errorLabel.Y = 166;
+            _errorLabel.ViewSize = new Point(ControlSize.X - 56, 22);
+
+            _okButton.Visible = false;
+            _classicOkButton.Visible = true;
+            _classicOkButton.X = 135;
+            _classicOkButton.Y = 202;
+            _classicOkButton.ControlSize = new Point(150, 38);
+            _classicOkButton.ViewSize = _classicOkButton.ControlSize;
+            _classicOkButton.BackgroundColor = ModernHudTheme.Success;
+            _classicOkButton.HoverBackgroundColor = Color.Lerp(ModernHudTheme.Success, Color.White, 0.15f);
+            _classicOkButton.PressedBackgroundColor = Color.Lerp(ModernHudTheme.Success, Color.Black, 0.15f);
+            _classicOkButton.BorderColor = ModernHudTheme.BorderInner;
         }
 
         public void SetValues(string host, string port)

@@ -27,7 +27,9 @@ namespace MuAndroid
             ConfigChanges.Orientation |
             ConfigChanges.Keyboard |
             ConfigChanges.KeyboardHidden |
-            ConfigChanges.ScreenSize)]
+            ConfigChanges.ScreenSize |
+            ConfigChanges.SmallestScreenSize |
+            ConfigChanges.ScreenLayout)]
     public class MainActivity : AndroidGameActivity
     {
         private Client.Main.MuGame _game;
@@ -319,6 +321,19 @@ namespace MuAndroid
                     SystemUiFlags.LayoutHideNavigation |
                     SystemUiFlags.LayoutFullscreen);
 #pragma warning restore CS0618
+            }
+        }
+
+        public override void OnConfigurationChanged(Android.Content.Res.Configuration newConfig)
+        {
+            base.OnConfigurationChanged(newConfig);
+            DetermineScreenSize();
+            HideSystemUI();
+            if (_game != null && ScreenWidth > 0 && ScreenHeight > 0)
+            {
+                int w = ScreenWidth;
+                int h = ScreenHeight;
+                Client.Main.MuGame.ScheduleOnMainThread(() => _game.ApplyMobileDisplaySize(w, h));
             }
         }
 

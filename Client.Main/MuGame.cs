@@ -609,42 +609,14 @@ namespace Client.Main
             ApplyGraphicsOptions();
 
             // Configure screen size for mobile platforms AFTER graphics device is ready
-            if (OperatingSystem.IsAndroid())
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
             {
                 var screenSize = GetActualScreenSize();
-                _graphics.PreferredBackBufferWidth = screenSize.X;
-                _graphics.PreferredBackBufferHeight = screenSize.Y;
-                _graphics.ApplyChanges();
+                ApplyMobileDisplaySize(screenSize.X, screenSize.Y);
 
-                UiScaler.Configure(
-                    screenSize.X,
-                    screenSize.Y,
-                    Constants.BASE_UI_WIDTH,
-                    Constants.BASE_UI_HEIGHT,
-                    ScaleMode.Stretch);
-
-                bootLogger.LogInformation("✅ Android UiScaler configured: Screen={Width}x{Height}, Virtual={VWidth}x{VHeight}, ScaleX={ScaleX:F4}, ScaleY={ScaleY:F4}",
+                bootLogger.LogInformation("✅ Mobile UiScaler configured: Screen={Width}x{Height}, Virtual={VWidth}x{VHeight}, ScaleX={ScaleX:F4}, ScaleY={ScaleY:F4}",
                     screenSize.X, screenSize.Y,
-                    Constants.BASE_UI_WIDTH, Constants.BASE_UI_HEIGHT,
-                    UiScaler.ScaleX, UiScaler.ScaleY);
-            }
-            else if (OperatingSystem.IsIOS())
-            {
-                var screenSize = GetActualScreenSize();
-                _graphics.PreferredBackBufferWidth = screenSize.X;
-                _graphics.PreferredBackBufferHeight = screenSize.Y;
-                _graphics.ApplyChanges();
-
-                UiScaler.Configure(
-                    screenSize.X,
-                    screenSize.Y,
-                    Constants.BASE_UI_WIDTH,
-                    Constants.BASE_UI_HEIGHT,
-                    ScaleMode.Stretch);
-
-                bootLogger.LogInformation("✅ iOS UiScaler configured: Screen={Width}x{Height}, Virtual={VWidth}x{VHeight}, ScaleX={ScaleX:F4}, ScaleY={ScaleY:F4}",
-                    screenSize.X, screenSize.Y,
-                    Constants.BASE_UI_WIDTH, Constants.BASE_UI_HEIGHT,
+                    UiScaler.VirtualSize.X, UiScaler.VirtualSize.Y,
                     UiScaler.ScaleX, UiScaler.ScaleY);
             }
             else
@@ -1935,6 +1907,47 @@ namespace Client.Main
             GraphicsManager.Instance.Sprite.End();
         }
 
+        private static Point ComputeMobileVirtualSize(int actualWidth, int actualHeight)
+        {
+            if (actualWidth <= 0 || actualHeight <= 0)
+                return new Point(Constants.BASE_UI_WIDTH, Constants.BASE_UI_HEIGHT);
+
+            float screenAspect = (float)actualWidth / actualHeight;
+            float baseAspect = (float)Constants.BASE_UI_WIDTH / Constants.BASE_UI_HEIGHT;
+
+            // Match the physical screen's aspect ratio so ScaleX == ScaleY with zero stretching
+            // and zero black bars on both ultrawide (21:9) and foldable/square (1.13:1) screens.
+            if (screenAspect >= baseAspect)
+            {
+                int virtualH = Constants.BASE_UI_HEIGHT;
+                int virtualW = Math.Max(Constants.BASE_UI_WIDTH, (int)MathF.Round(virtualH * screenAspect));
+                return new Point(virtualW, virtualH);
+            }
+            else
+            {
+                int virtualW = Constants.BASE_UI_WIDTH;
+                int virtualH = Math.Max(Constants.BASE_UI_HEIGHT, (int)MathF.Round(virtualW / screenAspect));
+                return new Point(virtualW, virtualH);
+            }
+        }
+
+        public void ApplyMobileDisplaySize(int width, int height)
+        {
+            if (width <= 0 || height <= 0)
+                return;
+
+            if (_graphics != null)
+            {
+                _graphics.PreferredBackBufferWidth = width;
+                _graphics.PreferredBackBufferHeight = height;
+                _graphics.ApplyChanges();
+            }
+
+            var virtualSize = ComputeMobileVirtualSize(width, height);
+            UiScaler.Configure(width, height, virtualSize.X, virtualSize.Y, ScaleMode.Uniform);
+            Camera.Instance.AspectRatio = (float)width / height;
+        }
+
         public void ApplyGraphicsConfiguration(GraphicsSettings graphics)
         {
             if (graphics == null)
@@ -1942,46 +1955,14 @@ namespace Client.Main
                 return;
             }
 
-            if (OperatingSystem.IsAndroid())
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
             {
-                // On Android, use actual screen size from GraphicsAdapter
                 var screenSize = GetActualScreenSize();
-                _graphics.PreferredBackBufferWidth = screenSize.X;
-                _graphics.PreferredBackBufferHeight = screenSize.Y;
-                _graphics.ApplyChanges();
+                ApplyMobileDisplaySize(screenSize.X, screenSize.Y);
 
-                UiScaler.Configure(
-                    screenSize.X,
-                    screenSize.Y,
-                    Math.Max(1, graphics.UiVirtualWidth),
-                    Math.Max(1, graphics.UiVirtualHeight),
-                    ScaleMode.Stretch);
-
-                Camera.Instance.AspectRatio = (float)screenSize.X / screenSize.Y;
-
-                _logger?.LogDebug("Android graphics configured: {Width}x{Height}, UiScaler: {ScaleX:F4}x{ScaleY:F4}",
+                _logger?.LogDebug("Mobile graphics configured: {Width}x{Height}, Virtual={VWidth}x{VHeight}, UiScaler: {ScaleX:F4}x{ScaleY:F4}",
                     screenSize.X, screenSize.Y,
-                    UiScaler.ScaleX, UiScaler.ScaleY);
-            }
-            else if (OperatingSystem.IsIOS())
-            {
-                // On iOS, use actual screen size, not config values
-                var screenSize = GetActualScreenSize();
-                _graphics.PreferredBackBufferWidth = screenSize.X;
-                _graphics.PreferredBackBufferHeight = screenSize.Y;
-                _graphics.ApplyChanges();
-
-                UiScaler.Configure(
-                    screenSize.X,
-                    screenSize.Y,
-                    Math.Max(1, graphics.UiVirtualWidth),
-                    Math.Max(1, graphics.UiVirtualHeight),
-                    ScaleMode.Stretch);
-
-                Camera.Instance.AspectRatio = (float)screenSize.X / screenSize.Y;
-
-                _logger?.LogDebug("iOS graphics configured: {Width}x{Height}, UiScaler: {ScaleX:F4}x{ScaleY:F4}",
-                    screenSize.X, screenSize.Y,
+                    UiScaler.VirtualSize.X, UiScaler.VirtualSize.Y,
                     UiScaler.ScaleX, UiScaler.ScaleY);
             }
             else
