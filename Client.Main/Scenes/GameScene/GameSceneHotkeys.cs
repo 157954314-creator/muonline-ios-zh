@@ -430,6 +430,11 @@ namespace Client.Main.Scenes
             _chatLog?.ScrollLines(-_chatLog.NumberOfShowingLines);
         }
 
+        internal void TriggerPickupNearestItem()
+        {
+            PickupNearestItem(default);
+        }
+
         private void PickupNearestItem(HotkeyContext context)
         {
             var network = MuGame.Network;

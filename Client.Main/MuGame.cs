@@ -571,8 +571,10 @@ namespace Client.Main
 
             AppSettings.Ui ??= new UiSettings();
             UiThemeManager.ConfigurePersistence(PersistUiTheme);
+            // Plan B on mobile: keep Modern dark-fantasy HP/MP orb bottom bar and overlay
+            // virtual joystick + attack/skill/pickup touch controls on top.
             string initialTheme = (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
-                ? nameof(UiThemeId.Classic)
+                ? nameof(UiThemeId.Modern)
                 : AppSettings.Ui.Theme;
             UiThemeManager.Initialize(initialTheme, bootLogger);
             AppSettings.Ui.Theme = UiThemeManager.CurrentId.ToString();

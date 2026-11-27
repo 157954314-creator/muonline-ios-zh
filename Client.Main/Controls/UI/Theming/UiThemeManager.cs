@@ -254,8 +254,10 @@ public static class UiThemeManager
             return Task.FromResult<Texture2D?>(null);
 
         // Classic controls are instantiated once so a live switch does not duplicate UI
-        // trees. Their dedicated assets must nevertheless remain completely cold in Modern.
-        if (CurrentId == UiThemeId.Modern && IsClassicPath(path))
+        // trees. Their dedicated assets remain cold in Modern on desktop, but mobile
+        // overlays the virtual joystick and touch action cluster on top of Modern HUD.
+        if (CurrentId == UiThemeId.Modern && IsClassicPath(path) &&
+            !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS())
             return Task.FromResult<Texture2D?>(null);
 
         string key = $"{CurrentId}:{Normalize(path)}:{Normalize(fallbackPath)}";

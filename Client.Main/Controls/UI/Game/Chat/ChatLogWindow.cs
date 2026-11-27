@@ -102,10 +102,9 @@ namespace Client.Main.Controls.UI
             _scrollOffset = 0;
             _currentViewType = MessageType.All;
             _showFrame = false;
-            _backgroundAlpha = DEFAULT_BACK_ALPHA;
-            // Classic is click-through until its frame is explicitly opened. Modern keeps
-            // its existing message interaction behavior when the frame is hidden.
-            Interactive = !IsSeason6;
+            _backgroundAlpha = (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) ? 0.40f : DEFAULT_BACK_ALPHA;
+            // Classic (and mobile overlay) is click-through until its frame is explicitly opened.
+            Interactive = !IsSeason6 && !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS();
 
             UpdateLayout(); // Initial layout calculation
         }

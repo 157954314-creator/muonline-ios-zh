@@ -127,16 +127,25 @@ namespace Client.Main.Controls.UI.Game.Hud
             _loadedTheme = UiThemeManager.CurrentId;
         }
 
+        private bool IsModernOverlay => UiThemeManager.CurrentId == UiThemeId.Modern;
+
         private void LayoutButtons()
         {
             // Canto inferior direito da tela em coords de UI virtual, levantado acima do HUD.
+            bool modernOverlay = IsModernOverlay;
+            int lift = modernOverlay ? 112 : BottomHudLift;
+            X = UiScaler.VirtualSize.X - ViewSize.X;
+            Y = UiScaler.VirtualSize.Y - ViewSize.Y - lift;
+
             float cornerX = UiScaler.VirtualSize.X;
-            float cornerY = UiScaler.VirtualSize.Y - BottomHudLift;
+            float cornerY = UiScaler.VirtualSize.Y - lift;
 
             var ac = new Vector2(cornerX + AttackCenter.X, cornerY - AttackCenter.Y);
             _attackRect = CenteredRect(ac, AttackSize / 2f);
 
-            var resetCenter = new Vector2(cornerX + ResetCenter.X, cornerY - ResetCenter.Y);
+            // In Modern overlay mode, place the Pickup ("拾") button comfortably left of Attack.
+            var auxOffset = modernOverlay ? new Vector2(-216f, 52f) : ResetCenter;
+            var resetCenter = new Vector2(cornerX + auxOffset.X, cornerY - auxOffset.Y);
             _resetRect = CenteredRect(resetCenter, ResetSize / 2f);
 
             BuildFan();
@@ -150,11 +159,11 @@ namespace Client.Main.Controls.UI.Game.Hud
         private IReadOnlyList<SkillEntryState> Skills =>
             (Scene as GameScene)?.ModernHud?.HotbarSkills ?? System.Array.Empty<SkillEntryState>();
 
-        // Quantas posições do arco exibir: 4 (Set 1) ou 7 (Set 2), conforme o set ativo
-        // da tela Skill Imprint. As posições 0..3 formam a fileira interna coesa (Set 1);
-        // 4..6 são a fileira externa que só aparece no Set 2.
+        // Quantas posições do arco exibir: 4 (Set 1 / Modern overlay) ou 7 (Set 2).
         private int VisibleCount =>
-            System.Math.Min(SkillArc.Length, (Scene as GameScene)?.ModernHud?.VisibleSkillCount ?? SkillCount);
+            IsModernOverlay
+                ? 4
+                : System.Math.Min(SkillArc.Length, (Scene as GameScene)?.ModernHud?.VisibleSkillCount ?? SkillCount);
 
         public override void Update(GameTime gameTime)
         {
@@ -203,7 +212,10 @@ namespace Client.Main.Controls.UI.Game.Hud
             else if (justPressed && _resetRect.Contains(p))
             {
                 Scene.SetMouseInputConsumed();
-                gs.ModernHud?.ResetActiveSkillSet();
+                if (IsModernOverlay)
+                    gs.PickupNearestItem();
+                else
+                    gs.ModernHud?.ResetActiveSkillSet();
             }
             else if (justPressed && _attackRect.Contains(p))
             {
@@ -323,8 +335,11 @@ namespace Client.Main.Controls.UI.Game.Hud
                 var font = GraphicsManager.Instance?.Font;
                 if (font != null)
                 {
-                    const float textScale = 0.56f;
-                    const string text = "R";
+                    bool modernOverlay = IsModernOverlay;
+                    float textScale = modernOverlay ? 0.50f : 0.56f;
+                    string text = modernOverlay
+                        ? (Localization.Loc.IsChinese ? "拾取" : "PICK")
+                        : "R";
                     var size = font.MeasureString(text) * textScale;
                     var pos = new Vector2(
                         rect.X + (rect.Width - size.X) / 2f,

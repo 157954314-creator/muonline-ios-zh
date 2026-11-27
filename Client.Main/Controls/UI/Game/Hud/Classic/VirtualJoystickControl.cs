@@ -42,14 +42,31 @@ namespace Client.Main.Controls.UI.Game.Hud
         {
             Interactive = true;
             AutoViewSize = false;
-            // Anchor the base to the lower-left corner of the virtual space.
-            int marginX = 40;
-            int marginBottom = 56;   // Raise the stick slightly above the bottom bar.
+            ApplyPosition();
+        }
+
+        private void ApplyPosition()
+        {
+            bool modernOverlay = UiThemeManager.CurrentId == UiThemeId.Modern;
+            int marginX = modernOverlay ? 32 : 40;
+            int marginBottom = modernOverlay ? 132 : 56; // Sit cleanly above Modern HP orb & bottom tray
             int size = (int)(BaseRadius * 2f);
             ControlSize = new Point(size, size);
             ViewSize = new Point(size, size);
             X = marginX;
             Y = UiScaler.VirtualSize.Y - size - marginBottom;
+        }
+
+        protected override void OnScreenSizeChanged()
+        {
+            base.OnScreenSizeChanged();
+            ApplyPosition();
+        }
+
+        protected override void OnThemeChanged(UiThemeChangedEventArgs e)
+        {
+            base.OnThemeChanged(e);
+            ApplyPosition();
         }
 
         public override async Task Load()

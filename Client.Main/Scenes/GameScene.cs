@@ -131,6 +131,7 @@ namespace Client.Main.Scenes
         // ───────────────────────── Properties ─────────────────────────
         public HeroObject Hero => _hero;
         public ChatLogWindow ChatLog => _chatLog;
+        public void PickupNearestItem() => _hotkeys?.TriggerPickupNearestItem();
         public InventoryControl InventoryControl => _inventoryControl;
         public TradeControl TradeControl => TradeControl.Instance;
         public PauseMenuControl PauseMenu => _pauseMenu;
@@ -1260,10 +1261,11 @@ namespace Client.Main.Scenes
                 return;
 
             bool classic = !ChatUiTheme.UseModernLayout;
-            if (classic)
+            bool mobile = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+            if (classic || mobile)
             {
                 // Place compact chat/system log below top-left location & MU Helper bar
-                // so it never overlaps the lower-left virtual movement joystick.
+                // so it never overlaps the lower-left virtual movement joystick or HP orb.
                 _chatLog.X = 12;
                 _chatLog.Y = 44;
                 _chatInput.X = 12;
@@ -1282,6 +1284,8 @@ namespace Client.Main.Scenes
         {
             UiThemeId currentTheme = UiThemeManager.CurrentId;
             bool classic = currentTheme == UiThemeId.Classic;
+            bool mobileTouchOverlay = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+            bool showTouchControls = classic || mobileTouchOverlay;
             bool enteringTheme = !_uiThemeVisibilityInitialized || _lastAppliedUiTheme != currentTheme;
             bool pauseMenuWasVisible = _pauseMenu?.Visible == true;
 
@@ -1357,14 +1361,14 @@ namespace Client.Main.Scenes
             }
             if (_classicTouchActions != null)
             {
-                _classicTouchActions.Visible = classic;
-                _classicTouchActions.Interactive = classic;
-                _classicTouchActions.MasterAlpha = classic ? 1f : 0f;
+                _classicTouchActions.Visible = showTouchControls;
+                _classicTouchActions.Interactive = showTouchControls;
+                _classicTouchActions.MasterAlpha = showTouchControls ? 1f : 0f;
             }
             if (_classicJoystick != null)
             {
-                _classicJoystick.Visible = classic;
-                _classicJoystick.Interactive = classic;
+                _classicJoystick.Visible = showTouchControls;
+                _classicJoystick.Interactive = showTouchControls;
             }
             if (_classicTouchMenu != null)
             {
@@ -1413,6 +1417,16 @@ namespace Client.Main.Scenes
                 _chatLog?.BringToFront();
                 _chatInput?.BringToFront();
             }
+            else if (mobileTouchOverlay)
+            {
+                if (Status == GameControlStatus.Ready)
+                    _ = EnsureMobileTouchAssetsAsync();
+                _classicTouchActions?.BringToFront();
+                _classicJoystick?.BringToFront();
+                _equipmentDurabilityHud?.BringToFront();
+                _chatLog?.BringToFront();
+                _chatInput?.BringToFront();
+            }
 
             // The theme option lives inside the pause menu. Reordering the replacement HUD
             // must not put it above an already open settings/modal surface.
@@ -1421,6 +1435,20 @@ namespace Client.Main.Scenes
 
             _lastAppliedUiTheme = currentTheme;
             _uiThemeVisibilityInitialized = true;
+        }
+
+        private async Task EnsureMobileTouchAssetsAsync()
+        {
+            try
+            {
+                await Task.WhenAll(
+                    _classicTouchActions?.Load() ?? Task.CompletedTask,
+                    _classicJoystick?.Load() ?? Task.CompletedTask);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to load mobile touch overlay assets.");
+            }
         }
 
         private async Task EnsureClassicAssetsAsync()
