@@ -99,11 +99,14 @@ namespace Client.Main.Controls.UI.Game.Hud
 
                 if (!down)
                 {
-                    // Soltou: recentra o manípulo. NÃO chama StopMovement (deixa o char
-                    // terminar o passo atual suavemente — evita o "pulo" ao soltar).
                     _active = false;
                     _knob = Vector2.Zero;
-                    _lastDx = _lastDy = 0;   // zera a direção pra o próximo drag reemitir
+                    _lastDx = _lastDy = 0;
+                    // Stop cleanly at current tile so hero doesn't keep sliding after thumb release.
+                    if (hero != null && hero.IsMoving)
+                    {
+                        hero.MoveTo(hero.Location, sendToServer: true, usePathfinding: false);
+                    }
                     return;
                 }
 
@@ -125,18 +128,14 @@ namespace Client.Main.Controls.UI.Game.Hud
             }
         }
 
-        // Quantos tiles à frente projetar o alvo na direção do analógico. Um alvo LONGE faz
-        // o MoveTo montar um caminho de vários tiles, então o char anda CONTÍNUO (IsMoving
-        // fica true entre tiles) — sem o flick de idle que reiniciava a animação, e permitindo
-        // entrar em corrida. Antes era 1 tile por vez, esperando parar → travava a animação.
-        private const int ProjectTiles = 8;
-        private int _lastDx, _lastDy;      // última direção de tile emitida
+        // Keep joystick walk bursts short (3 tiles) & throttled so client and OpenMU server
+        // stay tightly synchronized without walk-queue overshooting or sliding.
+        private const int ProjectTiles = 3;
+        private int _lastDx, _lastDy;
+        private double _lastEmitMs;
 
         private void DriveMovement(HeroObject hero, Vector2 screenDir)
         {
-            // Mapeia direção de TELA -> delta de TILE (iso do MU).
-            //   tela-cima (0,-1) -> tile (-1,+1); direita (1,0) -> (+1,+1);
-            //   baixo (0,+1) -> (+1,-1); esquerda (-1,0) -> (-1,-1).  (sy p/ baixo positivo)
             float sx = screenDir.X;
             float sy = screenDir.Y;
             Vector2 raw = new(sx + sy, sx - sy);
@@ -148,17 +147,14 @@ namespace Client.Main.Controls.UI.Game.Hud
             if (dx == 0 && dy == 0)
                 return;
 
-            // Reemite quando a DIREÇÃO muda OU quando a fila do caminho está ACABANDO (≤3
-            // tiles restantes). Reemitir ANTES de esvaziar mantém isAboutToMove SEMPRE true —
-            // sem isso, o path zerava por 1 frame, _runFrames resetava e a corrida caía pra
-            // andar a cada ~6 passos (corre/anda/corre). Alimentar à frente = corrida contínua.
+            double nowMs = Environment.TickCount64;
             bool dirChanged = dx != _lastDx || dy != _lastDy;
-            // The current WalkerObject API does not expose the internal path queue.
-            // Re-emit only when the current movement step has completed; direction
-            // changes still re-target immediately.
             bool pathLow = !hero.IsMoving;
             if (!dirChanged && !pathLow)
                 return;
+            if (dirChanged && (nowMs - _lastEmitMs) < 160)
+                return;
+            _lastEmitMs = nowMs;
 
             var loc = hero.Location;
 

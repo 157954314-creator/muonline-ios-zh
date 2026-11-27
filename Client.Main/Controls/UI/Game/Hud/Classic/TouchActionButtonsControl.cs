@@ -236,7 +236,7 @@ namespace Client.Main.Controls.UI.Game.Hud
             if (world?.Monsters == null || hero == null)
                 return null;
             MonsterObject nearest = null;
-            float best = float.MaxValue;
+            float best = 12f * 12f; // ignore far-away monsters (>12 tiles) so touch attack feels responsive
             var hloc = hero.Location;
             var monsters = world.Monsters;
             for (int i = 0; i < monsters.Count; i++)

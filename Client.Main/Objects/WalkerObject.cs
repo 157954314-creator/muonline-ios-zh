@@ -549,12 +549,24 @@ namespace Client.Main.Objects
             Vector2 newTile = new((int)tile.X, (int)tile.Y);
             float tileDist = Vector2.Distance(_location, newTile);
 
-            if (MoveTargetPosition != Vector3.Zero && tileDist <= 4.5f)
+            if (MoveTargetPosition != Vector3.Zero)
             {
-                _location = newTile;
-                _targetPositionDirty = true;
-                _serverGlideRemaining = 0.55f;
-                return;
+                if (IsMainWalker && tileDist <= 4.5f)
+                {
+                    // Smooth glide for local hero (e.g. Cyclone/Lunge) so camera never jumps.
+                    _location = newTile;
+                    _targetPositionDirty = true;
+                    _serverGlideRemaining = 0.55f;
+                    return;
+                }
+                if (!IsMainWalker && tileDist <= 1.6f)
+                {
+                    // Tight fast settle for monsters/remote players to prevent floor-sliding desync.
+                    _location = newTile;
+                    _targetPositionDirty = true;
+                    _serverGlideRemaining = 0.12f;
+                    return;
+                }
             }
 
             _serverGlideRemaining = 0f;
