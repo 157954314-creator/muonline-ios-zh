@@ -46,8 +46,10 @@ namespace MuAndroid
                     }
 
                     var container = new FrameLayout(activity);
-                    int padX = (int)(20 * activity.Resources!.DisplayMetrics!.Density);
-                    int padY = (int)(12 * activity.Resources.DisplayMetrics.Density);
+                    float density = activity.Resources!.DisplayMetrics!.Density;
+                    int padX = (int)(20 * density);
+                    int padY = (int)(12 * density);
+                    int innerPad = (int)(10 * density);
                     container.SetPadding(padX, padY, padX, padY / 2);
 
                     var editText = new EditText(activity)
@@ -58,6 +60,10 @@ namespace MuAndroid
                             ? (InputTypes.ClassText | InputTypes.TextVariationPassword)
                             : (InputTypes.ClassText | InputTypes.TextFlagNoSuggestions)
                     };
+                    editText.SetTextColor(Android.Graphics.Color.White);
+                    editText.SetHintTextColor(Android.Graphics.Color.Rgb(165, 175, 190));
+                    editText.SetBackgroundColor(Android.Graphics.Color.Rgb(30, 35, 46));
+                    editText.SetPadding(innerPad, innerPad, innerPad, innerPad);
                     editText.SetSingleLine(true);
                     editText.SetSelection(editText.Text?.Length ?? 0);
                     container.AddView(editText, new FrameLayout.LayoutParams(
