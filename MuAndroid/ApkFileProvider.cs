@@ -1,3 +1,4 @@
+#nullable enable
 using Android.Content;
 using Android.Database;
 using Android.OS;

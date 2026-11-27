@@ -1,3 +1,4 @@
+#nullable enable
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
@@ -99,7 +100,7 @@ namespace MuAndroid
 
 #pragma warning disable CA1422
                 PackageInfo? info = Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu
-                    ? pm.GetPackageInfo(context.PackageName, PackageManager.PackageInfoFlags.Of(0))
+                    ? pm.GetPackageInfo(context.PackageName, PackageManager.PackageInfoFlags.Of(0L))
                     : pm.GetPackageInfo(context.PackageName, 0);
 #pragma warning restore CA1422
 
@@ -208,7 +209,7 @@ namespace MuAndroid
                             await dst.WriteAsync(buffer.AsMemory(0, read), cts.Token).ConfigureAwait(false);
                             downloaded += read;
 
-                            long now = Environment.TickCount64;
+                            long now = System.Environment.TickCount64;
                             if (now - lastUiTick >= 150)
                             {
                                 lastUiTick = now;
@@ -242,7 +243,7 @@ namespace MuAndroid
                         LaunchPackageInstaller(activity);
                     });
                 }
-                catch (OperationCanceledException)
+                catch (System.OperationCanceledException)
                 {
                     try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
                     activity.RunOnUiThread(() =>
