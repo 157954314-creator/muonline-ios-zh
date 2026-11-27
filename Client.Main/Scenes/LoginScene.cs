@@ -108,7 +108,10 @@ namespace Client.Main.Scenes
             progressCallback?.Invoke("Loading Login World...", 0.21f);
 
             World?.Dispose();
-            var loginWorld = new NewLoginWorld { Visible = false };
+            bool hasWorld95 = System.IO.Directory.Exists(System.IO.Path.Combine(Constants.DataPath, "World95"));
+            Controls.WorldControl loginWorld = hasWorld95
+                ? new NewLoginWorld { Visible = false }
+                : new LoginWorld { Visible = false };
             Controls.Add(loginWorld);
             // Assuming NewLoginWorld.Initialize() is relatively fast.
             // If it were slow, it would need its own progress reporting that this method would scale.

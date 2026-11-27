@@ -31,7 +31,14 @@ namespace Client.Main.Worlds
         public Vector3 CharacterDisplayPosition => _characterDisplayPosition;
         public Vector3 CharacterDisplayAngle => _characterDisplayAngle;
 
-        public SelectWorld() : base(worldIndex: 94)
+        private static short ResolveSelectWorldIndex()
+        {
+            return System.IO.Directory.Exists(System.IO.Path.Combine(Constants.DataPath, "World94"))
+                ? (short)94
+                : (short)75;
+        }
+
+        public SelectWorld() : base(worldIndex: ResolveSelectWorldIndex())
         {
             EnableShadows = false;
             Terrain.PreferIndexBatching = true;

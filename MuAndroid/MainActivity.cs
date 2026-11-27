@@ -269,7 +269,12 @@ namespace MuAndroid
                     Directory.CreateDirectory(Client.Main.Constants.DataPath);
 
                 _view = (View)_game.Services.GetService(typeof(View));
-                SetContentView(_view);
+                var (cinemaW, cinemaH) = ComputeCinema16x9Size(ScreenWidth, ScreenHeight);
+                var rootContainer = new Android.Widget.FrameLayout(this);
+                rootContainer.SetBackgroundColor(Android.Graphics.Color.Black);
+                var lp = new Android.Widget.FrameLayout.LayoutParams(cinemaW, cinemaH, GravityFlags.Center);
+                rootContainer.AddView(_view, lp);
+                SetContentView(rootContainer);
 
                 // IMPORTANT: Configure immersive mode AFTER SetContentView
                 // This ensures the DecorView is fully initialized
@@ -324,16 +329,40 @@ namespace MuAndroid
             }
         }
 
+        private static (int Width, int Height) ComputeCinema16x9Size(int screenW, int screenH)
+        {
+            if (screenW <= 0 || screenH <= 0)
+                return (1280, 720);
+
+            const float targetAspect = 16f / 9f;
+            float currentAspect = (float)screenW / screenH;
+            if (currentAspect > targetAspect)
+            {
+                int w = Math.Max(320, (int)MathF.Round(screenH * targetAspect));
+                return (w, screenH);
+            }
+            else
+            {
+                int h = Math.Max(180, (int)MathF.Round(screenW / targetAspect));
+                return (screenW, h);
+            }
+        }
+
         public override void OnConfigurationChanged(Android.Content.Res.Configuration newConfig)
         {
             base.OnConfigurationChanged(newConfig);
             DetermineScreenSize();
             HideSystemUI();
-            if (_game != null && ScreenWidth > 0 && ScreenHeight > 0)
+            if (_view != null && ScreenWidth > 0 && ScreenHeight > 0)
             {
-                int w = ScreenWidth;
-                int h = ScreenHeight;
-                Client.Main.MuGame.ScheduleOnMainThread(() => _game.ApplyMobileDisplaySize(w, h));
+                var (cw, ch) = ComputeCinema16x9Size(ScreenWidth, ScreenHeight);
+                var lp = new Android.Widget.FrameLayout.LayoutParams(cw, ch, GravityFlags.Center);
+                _view.LayoutParameters = lp;
+                _view.RequestLayout();
+                if (_game != null)
+                {
+                    Client.Main.MuGame.ScheduleOnMainThread(() => _game.ApplyMobileDisplaySize(cw, ch));
+                }
             }
         }
 

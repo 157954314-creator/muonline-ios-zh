@@ -460,7 +460,13 @@ namespace Client.Main
         {
             if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
             {
-                // Use GraphicsAdapter to get actual display size
+                // Prefer actual SurfaceView / backbuffer dimensions (supports 16:9 cinema letterbox & foldables)
+                var pp = base.GraphicsDevice?.PresentationParameters;
+                if (pp != null && pp.BackBufferWidth > 0 && pp.BackBufferHeight > 0)
+                {
+                    return new Point(pp.BackBufferWidth, pp.BackBufferHeight);
+                }
+
                 var adapter = base.GraphicsDevice?.Adapter ?? GraphicsAdapter.DefaultAdapter;
                 if (adapter != null)
                 {
@@ -468,7 +474,6 @@ namespace Client.Main
                     return new Point(displayMode.Width, displayMode.Height);
                 }
 
-                // Fallback to configured size
                 return new Point(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
             }
             else
@@ -1943,9 +1948,9 @@ namespace Client.Main
                 _graphics.ApplyChanges();
             }
 
-            var virtualSize = ComputeMobileVirtualSize(width, height);
-            UiScaler.Configure(width, height, virtualSize.X, virtualSize.Y, ScaleMode.Uniform);
-            Camera.Instance.AspectRatio = (float)width / height;
+            // Cinema 16:9 uniform scaling: preserves exact 1280x720 proportions with zero stretching.
+            UiScaler.Configure(width, height, Constants.BASE_UI_WIDTH, Constants.BASE_UI_HEIGHT, ScaleMode.Uniform);
+            Camera.Instance.AspectRatio = (float)Constants.BASE_UI_WIDTH / Constants.BASE_UI_HEIGHT;
         }
 
         public void ApplyGraphicsConfiguration(GraphicsSettings graphics)
