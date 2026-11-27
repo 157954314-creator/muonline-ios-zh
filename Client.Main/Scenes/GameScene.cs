@@ -1262,9 +1262,10 @@ namespace Client.Main.Scenes
             bool classic = !ChatUiTheme.UseModernLayout;
             if (classic)
             {
+                // Place compact chat/system log below top-left location & MU Helper bar
+                // so it never overlaps the lower-left virtual movement joystick.
                 _chatLog.X = 12;
-                _chatLog.Y = UiScaler.VirtualSize.Y - UiThemeManager.Current.Metrics.ChatInputSize.Y
-                    - Math.Max(1, _chatLog.ViewSize.Y) - 10;
+                _chatLog.Y = 44;
                 _chatInput.X = 12;
                 _chatInput.Y = UiScaler.VirtualSize.Y - UiThemeManager.Current.Metrics.ChatInputSize.Y - 8;
             }
