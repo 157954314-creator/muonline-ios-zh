@@ -189,6 +189,10 @@ namespace Client.Main.Worlds
         protected override void CreateMapTileObjects()
         {
             base.CreateMapTileObjects();
+            if (_isSeason6SelectWorld)
+                return;
+
+            // World94 (Season 20) object mappings:
             // Editor helpers that the original never shows: label boards (Korean text) and a stand-in for the character.
             MapTileObjects[0] = null;
             MapTileObjects[14] = null;
@@ -295,7 +299,7 @@ namespace Client.Main.Worlds
         /// </summary>
         private void AddSceneEffects()
         {
-            if (_sceneEffectsAdded || !Constants.ENABLE_MENU_SCENE_EFFECTS)
+            if (_sceneEffectsAdded || !Constants.ENABLE_MENU_SCENE_EFFECTS || _isSeason6SelectWorld)
                 return;
             _sceneEffectsAdded = true;
 
