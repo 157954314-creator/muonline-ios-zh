@@ -80,9 +80,9 @@ namespace Client.Main.Controls
 
         public void RefreshTextures() => _renderer?.RefreshTextures();
 
-        public float WaterSpeed { get => _renderer.WaterSpeed; set => _renderer.WaterSpeed = value; }
-        public float DistortionAmplitude { get => _renderer.DistortionAmplitude; set => _renderer.DistortionAmplitude = value; }
-        public float DistortionFrequency { get => _renderer.DistortionFrequency; set => _renderer.DistortionFrequency = value; }
+        public float WaterSpeed { get => _renderer?.WaterSpeed ?? 0f; set { if (_renderer != null) _renderer.WaterSpeed = value; } }
+        public float DistortionAmplitude { get => _renderer?.DistortionAmplitude ?? 0f; set { if (_renderer != null) _renderer.DistortionAmplitude = value; } }
+        public float DistortionFrequency { get => _renderer?.DistortionFrequency ?? 0f; set { if (_renderer != null) _renderer.DistortionFrequency = value; } }
         // A world may set the ambient in its constructor, before the renderer exists; it is applied on creation.
         private float? _pendingAmbientLight;
 
@@ -105,8 +105,8 @@ namespace Client.Main.Controls
                 }
             }
         }
-        public float GrassBrightness { get => _grassRenderer.GrassBrightness; set => _grassRenderer.GrassBrightness = value; }
-        public Vector2 WaterFlowDirection { get => _renderer.WaterFlowDirection; set => _renderer.WaterFlowDirection = value; }
+        public float GrassBrightness { get => _grassRenderer?.GrassBrightness ?? 1f; set { if (_grassRenderer != null) _grassRenderer.GrassBrightness = value; } }
+        public Vector2 WaterFlowDirection { get => _renderer?.WaterFlowDirection ?? Vector2.UnitY; set { if (_renderer != null) _renderer.WaterFlowDirection = value; } }
         public HashSet<byte> GrassTextureIndices => _grassRenderer.GrassTextureIndices;
         public bool IsGpuTerrainLighting => _renderer?.IsGpuLightingActive == true;
         public bool IsDynamicLightingShaderAvailable => _renderer?.IsDynamicLightingShaderAvailable == true;

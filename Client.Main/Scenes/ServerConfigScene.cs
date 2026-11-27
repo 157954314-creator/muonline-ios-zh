@@ -153,8 +153,15 @@ namespace Client.Main.Scenes
             {
                 if (_backgroundTexture != null)
                 {
+                    int vw = UiScaler.VirtualSize.X;
+                    int vh = UiScaler.VirtualSize.Y;
+                    float scale = MathF.Max((float)vw / _backgroundTexture.Width, (float)vh / _backgroundTexture.Height);
+                    int drawW = (int)MathF.Ceiling(_backgroundTexture.Width * scale);
+                    int drawH = (int)MathF.Ceiling(_backgroundTexture.Height * scale);
+                    int drawX = (vw - drawW) / 2;
+                    int drawY = (vh - drawH) / 2;
                     GraphicsManager.Instance.Sprite.Draw(_backgroundTexture,
-                        new Rectangle(0, 0, UiScaler.VirtualSize.X, UiScaler.VirtualSize.Y), Color.White);
+                        new Rectangle(drawX, drawY, drawW, drawH), Color.White);
                 }
                 else
                 {
