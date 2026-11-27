@@ -26,6 +26,8 @@ jobs:
   build-android-apk:
     runs-on: windows-latest
     timeout-minutes: 60
+    permissions:
+      contents: write
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
@@ -155,3 +157,21 @@ jobs:
           name: MuMono-Android-APK
           path: release-apk/MuMono-Android-arm64.apk
           if-no-files-found: error
+
+      - name: Publish Direct Download Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $tag = "android-latest"
+          $apk = "release-apk/MuMono-Android-arm64.apk"
+          $notes = "MuMono Android ARM64 APK (自动构建于 $(Get-Date -Format 'yyyy-MM-dd HH:mm') UTC)`n`n直接点击下方 **MuMono-Android-arm64.apk** 下载安装即可（免解压）。"
+          $exists = $true
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) { $exists = $false }
+          if ($exists) {
+            gh release upload $tag $apk --clobber
+            gh release edit $tag --title "MuMono Android APK (Latest)" --notes $notes
+          } else {
+            gh release create $tag $apk --title "MuMono Android APK (Latest)" --notes $notes --prerelease=false
+          }
