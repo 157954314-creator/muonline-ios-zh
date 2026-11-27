@@ -101,6 +101,10 @@ jobs:
         run: |
           $outDir = "artifacts/android-apk"
           New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+          $verCode = [int]"${{ github.run_number }}"
+          if ($verCode -lt 2) { $verCode = 2 }
+          $verName = "1.0.$verCode"
+          Write-Host "Building Android APK version $verName (code $verCode) with fixed signing keystore"
           dotnet restore MuAndroid/MuAndroid.csproj `
             -r android-arm64 `
             --disable-parallel `
@@ -116,6 +120,13 @@ jobs:
             --no-restore `
             --disable-build-servers `
             -m:1 `
+            -p:ApplicationVersion=$verCode `
+            -p:ApplicationDisplayVersion=$verName `
+            -p:AndroidKeyStore=true `
+            -p:AndroidSigningKeyStore=Signing/mumono-dev.p12 `
+            -p:AndroidSigningKeyAlias=mumono `
+            -p:AndroidSigningKeyPass=mumono123 `
+            -p:AndroidSigningStorePass=mumono123 `
             -p:AndroidPerformanceRelease=false `
             -p:AndroidPackageFormats=apk `
             -p:RestoreMonoGameTools=false `
@@ -135,7 +146,7 @@ jobs:
           -SkipToolRestore
           -NoArchive
 
-      - name: Collect Signed APK
+      - name: Collect Signed APK & Generate version.json
         shell: pwsh
         run: |
           $signed = Get-ChildItem "artifacts/android-apk" -Filter "*-Signed.apk" -Recurse | Select-Object -First 1
@@ -149,6 +160,20 @@ jobs:
           New-Item -ItemType Directory -Path "release-apk" -Force | Out-Null
           $dest = "release-apk/MuMono-Android-arm64.apk"
           Copy-Item $signed.FullName $dest -Force
+
+          $verCode = [int]"${{ github.run_number }}"
+          if ($verCode -lt 2) { $verCode = 2 }
+          $verName = "1.0.$verCode"
+          $commitMsg = (git log -1 --pretty=%s)
+          $manifest = [ordered]@{
+            versionCode = $verCode
+            versionName = $verName
+            apkUrl      = "https://github.com/${{ github.repository }}/releases/download/android-latest/MuMono-Android-arm64.apk"
+            notes       = $commitMsg
+            publishedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content "release-apk/version.json" -Encoding UTF8
+          Get-Content "release-apk/version.json"
           Get-Item $dest | Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length/1MB,2)}}
 
       - name: Upload Android APK Artifact
@@ -165,13 +190,17 @@ jobs:
         run: |
           $tag = "android-latest"
           $apk = "release-apk/MuMono-Android-arm64.apk"
-          $notes = "MuMono Android ARM64 APK (自动构建于 $(Get-Date -Format 'yyyy-MM-dd HH:mm') UTC)`n`n直接点击下方 **MuMono-Android-arm64.apk** 下载安装即可（免解压）。"
+          $verJson = "release-apk/version.json"
+          $verCode = [int]"${{ github.run_number }}"
+          if ($verCode -lt 2) { $verCode = 2 }
+          $verName = "1.0.$verCode"
+          $notes = "MuMono Android ARM64 APK v$verName (Build $verCode, 自动构建于 $(Get-Date -Format 'yyyy-MM-dd HH:mm') UTC)`n`n直接点击下方 **MuMono-Android-arm64.apk** 下载安装即可（免解压，支持 App 内自动检测更新与无缝覆盖安装）。"
           $exists = $true
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) { $exists = $false }
           if ($exists) {
-            gh release upload $tag $apk --clobber
-            gh release edit $tag --title "MuMono Android APK (Latest)" --notes $notes
+            gh release upload $tag $apk $verJson --clobber
+            gh release edit $tag --title "MuMono Android APK (v$verName)" --notes $notes
           } else {
-            gh release create $tag $apk --title "MuMono Android APK (Latest)" --notes $notes --prerelease=false
+            gh release create $tag $apk $verJson --title "MuMono Android APK (v$verName)" --notes $notes --prerelease=false
           }

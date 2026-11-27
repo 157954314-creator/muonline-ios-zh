@@ -273,6 +273,9 @@ namespace MuAndroid
                 // This ensures the DecorView is fully initialized
                 HideSystemUI();
 
+                // Check for newer APK release in background (non-blocking)
+                AndroidAutoUpdater.CheckInBackground(this);
+
                 _game.Run();
             }
             catch (Exception ex)
