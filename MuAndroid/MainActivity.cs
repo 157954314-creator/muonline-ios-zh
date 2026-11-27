@@ -185,6 +185,9 @@ namespace MuAndroid
             Constants.DRAW_GRASS = false;
             Constants.ENABLE_DYNAMIC_LIGHTS = false;
             Constants.ENABLE_DYNAMIC_LIGHTING_SHADER = true;
+            Constants.ENABLE_GPU_SKINNING = false;
+            Constants.ENABLE_WALKER_CROWD_INSTANCING = false;
+            Constants.ENABLE_ANIMATED_MAP_CROWD_INSTANCING = false;
             Constants.ENABLE_TERRAIN_GPU_LIGHTING = false;
             Constants.OPTIMIZE_FOR_INTEGRATED_GPU = true;
             Constants.ENABLE_LOW_QUALITY_IN_LOGIN_SCENE = true;

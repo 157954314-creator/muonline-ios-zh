@@ -98,7 +98,7 @@ namespace Client.Main.Controls.UI
                 }
             }
 
-            _showingLines = DEFAULT_SHOWING_LINES;
+            _showingLines = (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) ? 4 : DEFAULT_SHOWING_LINES;
             _scrollOffset = 0;
             _currentViewType = MessageType.All;
             _showFrame = false;
@@ -462,10 +462,10 @@ namespace Client.Main.Controls.UI
                     var boxRect = new Rectangle(DisplayRectangle.X + 2, (int)MathF.Floor(y) - padY, Math.Max(40, boxW), boxH);
 
                     UiDrawHelper.DrawVerticalGradient(spriteBatch, boxRect,
-                        new Color(10, 13, 20, 168), new Color(7, 9, 14, 196), 6);
+                        new Color(10, 13, 20, 118), new Color(7, 9, 14, 156), 6);
                     // Subtle antique-gold left accent + soft dark-gold hairline border
-                    UiDrawHelper.DrawBorder(spriteBatch, boxRect, new Color(152, 124, 72, 72));
-                    spriteBatch.Draw(pixel, new Rectangle(boxRect.X, boxRect.Y + 2, 2, Math.Max(1, boxRect.Height - 4)), new Color(204, 166, 92, 165));
+                    UiDrawHelper.DrawBorder(spriteBatch, boxRect, new Color(152, 124, 72, 58));
+                    spriteBatch.Draw(pixel, new Rectangle(boxRect.X, boxRect.Y + 2, 2, Math.Max(1, boxRect.Height - 4)), new Color(204, 166, 92, 140));
                 }
 
                 for (int i = first; i <= last; i++)
@@ -683,8 +683,9 @@ namespace Client.Main.Controls.UI
             }
             else
             {
-                Width = _classicWidth;
-                _fontScale = 0.72f;
+                // Keep chat box narrow enough to never overlap the Modern HUD red HP orb.
+                Width = Math.Min(_classicWidth, 232);
+                _fontScale = 0.68f;
             }
 
             CalculateLineHeight();

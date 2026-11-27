@@ -408,8 +408,14 @@ namespace Client.Main
             Constants.ANIMATION_UPDATE_FPS = animationUpdateFps;
             Constants.ENABLE_CROWD_SPATIAL_CULLING = graphics.EnableCrowdSpatialCulling;
             Constants.REMASTERED_TEXTURES = graphics.RemasteredTextures;
-            Constants.ENABLE_WALKER_CROWD_INSTANCING = graphics.EnableWalkerCrowdInstancing;
-            Constants.ENABLE_WALKER_CROWD_INSTANCING_WITH_CHILDREN = graphics.EnableWalkerCrowdInstancingWithChildren;
+            bool isMobileGles = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+            Constants.ENABLE_WALKER_CROWD_INSTANCING = !isMobileGles && graphics.EnableWalkerCrowdInstancing;
+            Constants.ENABLE_WALKER_CROWD_INSTANCING_WITH_CHILDREN = !isMobileGles && graphics.EnableWalkerCrowdInstancingWithChildren;
+            if (isMobileGles)
+            {
+                Constants.ENABLE_GPU_SKINNING = false;
+                Constants.ENABLE_ANIMATED_MAP_CROWD_INSTANCING = false;
+            }
             Constants.ENABLE_ANIMATION_THROTTLING = graphics.EnableAnimationThrottling;
             Constants.ENABLE_SHARED_ANIMATION_PALETTES = graphics.EnableSharedAnimationPalettes;
             Constants.ENABLE_BMD_MESH_BATCHING = graphics.EnableBmdMeshBatching;
