@@ -182,22 +182,23 @@ namespace MuAndroid
         }
         private void ApplyAndroidDefaults()
         {
-            Constants.DRAW_GRASS = false;
-            Constants.ENABLE_DYNAMIC_LIGHTS = false;
+            // Flagship-grade mobile defaults matching PC visuals (players on older phones can lower in Settings).
+            Constants.DRAW_GRASS = true;
+            Constants.ENABLE_DYNAMIC_LIGHTS = true;
             Constants.ENABLE_DYNAMIC_LIGHTING_SHADER = true;
             Constants.ENABLE_GPU_SKINNING = false;
             Constants.ENABLE_WALKER_CROWD_INSTANCING = false;
             Constants.ENABLE_ANIMATED_MAP_CROWD_INSTANCING = false;
-            Constants.ENABLE_TERRAIN_GPU_LIGHTING = false;
-            Constants.OPTIMIZE_FOR_INTEGRATED_GPU = true;
-            Constants.ENABLE_LOW_QUALITY_IN_LOGIN_SCENE = true;
+            Constants.ENABLE_TERRAIN_GPU_LIGHTING = true;
+            Constants.OPTIMIZE_FOR_INTEGRATED_GPU = false;
+            Constants.ENABLE_LOW_QUALITY_IN_LOGIN_SCENE = false;
             Constants.ENABLE_ITEM_MATERIAL_SHADER = true;
             Constants.ENABLE_MONSTER_MATERIAL_SHADER = true;
-            Constants.ENABLE_WEAPON_TRAIL = false;
-            Constants.HIGH_QUALITY_TEXTURES = false;
-            Constants.RENDER_SCALE = 0.85f;
+            Constants.ENABLE_WEAPON_TRAIL = true;
+            Constants.HIGH_QUALITY_TEXTURES = true;
+            Constants.RENDER_SCALE = 1.0f;
             Constants.DYNAMIC_LIGHT_UPDATE_FPS = 30;
-            Constants.FOV_SCALE = 0.85f;
+            Constants.FOV_SCALE = 1.0f;
         }
 
         protected override void OnCreate(Bundle bundle)
