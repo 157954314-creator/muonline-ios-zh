@@ -327,7 +327,7 @@ namespace Client.Main.Worlds
         public override void Draw(GameTime gameTime)
         {
             var gd = GraphicsManager.Instance.GraphicsDevice;
-            gd.BlendState = BlendState.AlphaBlend;
+            gd.BlendState = BlendState.NonPremultiplied;
             gd.DepthStencilState = DepthStencilState.Default;
             gd.SamplerStates[0] = SamplerState.LinearClamp;
 

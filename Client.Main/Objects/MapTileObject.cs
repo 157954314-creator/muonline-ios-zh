@@ -13,7 +13,10 @@ namespace Client.Main.Objects
 
         public MapTileObject()
         {
-            BlendState = BlendState.AlphaBlend;
+            // MU .OZT textures and model shaders output straight (non-premultiplied) RGBA.
+            // Using BlendState.AlphaBlend (Src=One) causes A==0 and soft-edge pixels (e.g. World75 so_grass.OZT)
+            // to add 100% of their RGB as bright glowing rectangles.
+            BlendState = BlendState.NonPremultiplied;
             RenderShadow = false;
         }
 

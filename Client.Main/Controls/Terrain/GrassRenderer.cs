@@ -696,7 +696,8 @@ namespace Client.Main.Controls.Terrain
         private static bool IsGrassDisabledWorld(short worldIndex)
         {
             return worldIndex == 7 || worldIndex == 67 ||
-                   (worldIndex >= 11 && worldIndex <= 17) || worldIndex == 52;
+                   (worldIndex >= 11 && worldIndex <= 17) || worldIndex == 52 ||
+                   worldIndex == 74 || worldIndex == 75 || worldIndex == 94;
         }
 
         private void DisposeBatches()

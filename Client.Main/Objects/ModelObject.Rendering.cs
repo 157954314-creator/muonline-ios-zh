@@ -314,7 +314,12 @@ namespace Client.Main.Objects
 
             // Default to instance properties which can be changed dynamically by code
             // IMPORTANT: Use instance properties, not cached states, as they can be modified at runtime!
-            return isBlendMesh ? BlendMeshState : BlendState;
+            BlendState resolved = isBlendMesh ? BlendMeshState : BlendState;
+            // Straight-alpha RGBA cutout meshes (.OZT foliage/grass/trees) must not use premultiplied
+            // BlendState.AlphaBlend (Src=One), otherwise soft-edge and A==0 pixels render as glowing squares.
+            if (IsDepthWritingCutout(mesh, isBlendMesh) && ReferenceEquals(resolved, BlendState.AlphaBlend))
+                return BlendState.NonPremultiplied;
+            return resolved;
         }
 
         // Mesh draws set the blend and rasterizer states only when they change; DrawModel and the deferred mesh
