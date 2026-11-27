@@ -19,8 +19,9 @@ namespace Client.Main.Worlds
 {
     public class SelectWorld : CinematicWorld
     {
-        private readonly Vector3 _characterDisplayPosition = new(14000, 12295, 250);
-        private readonly Vector3 _characterDisplayAngle = new(0, 0, MathHelper.ToRadians(90));
+        private Vector3 _characterDisplayPosition = new(14000, 12295, 250);
+        private Vector3 _characterDisplayAngle = new(0, 0, MathHelper.ToRadians(90));
+        private readonly bool _isSeason6SelectWorld;
         private ILogger<SelectWorld> _logger;
         private CharacterSelectionController _controller;
         private readonly SemaphoreSlim _faceLoadGate = new(1, 1);
@@ -40,6 +41,12 @@ namespace Client.Main.Worlds
 
         public SelectWorld() : base(worldIndex: ResolveSelectWorldIndex())
         {
+            _isSeason6SelectWorld = WorldIndex == 75;
+            if (_isSeason6SelectWorld)
+            {
+                _characterDisplayPosition = new Vector3(8008f, 18885f, 360f);
+                _characterDisplayAngle = new Vector3(0f, 0f, MathHelper.ToRadians(115f));
+            }
             EnableShadows = false;
             Terrain.PreferIndexBatching = true;
             Glow.Threshold = 0.55f;
@@ -60,6 +67,16 @@ namespace Client.Main.Worlds
 
         protected override void ConfigureCameraState(ref CameraState cameraState)
         {
+            if (_isSeason6SelectWorld)
+            {
+                cameraState = cameraState.With(
+                    position: new Vector3(9858f, 18813f, 700f),
+                    target: new Vector3(7200f, 19550f, 550f),
+                    viewFar: 5000f,
+                    fieldOfView: 35f * Constants.FOV_SCALE);
+                return;
+            }
+
             cameraState = cameraState.With(
                 viewFar: 8000f,   // the star field stands ~7100 units from the camera; 5500 (+1800) clipped its edges
                 fieldOfView: 29f * Constants.FOV_SCALE,

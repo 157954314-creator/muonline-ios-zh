@@ -269,18 +269,27 @@ namespace MuAndroid
                     Directory.CreateDirectory(Client.Main.Constants.DataPath);
 
                 _view = (View)_game.Services.GetService(typeof(View));
-                var (cinemaW, cinemaH) = ComputeCinema16x9Size(ScreenWidth, ScreenHeight);
                 var rootContainer = new Android.Widget.FrameLayout(this);
                 rootContainer.SetBackgroundColor(Android.Graphics.Color.Black);
-                var lp = new Android.Widget.FrameLayout.LayoutParams(cinemaW, cinemaH, GravityFlags.Center);
+                var (initW, initH) = ComputeCinema16x9Size(ScreenWidth, ScreenHeight);
+                var lp = new Android.Widget.FrameLayout.LayoutParams(initW, initH, GravityFlags.Center);
                 rootContainer.AddView(_view, lp);
-                _view.LayoutChange += (_, e) =>
+                rootContainer.LayoutChange += (_, e) =>
                 {
-                    int w = e.Right - e.Left;
-                    int h = e.Bottom - e.Top;
-                    if (w > 0 && h > 0 && _game != null)
+                    int availW = e.Right - e.Left;
+                    int availH = e.Bottom - e.Top;
+                    if (availW <= 0 || availH <= 0 || _view == null)
+                        return;
+                    var (cw, ch) = ComputeCinema16x9Size(availW, availH);
+                    var cur = _view.LayoutParameters;
+                    if (cur == null || cur.Width != cw || cur.Height != ch)
                     {
-                        Client.Main.MuGame.ScheduleOnMainThread(() => _game.ApplyMobileDisplaySize(w, h));
+                        _view.LayoutParameters = new Android.Widget.FrameLayout.LayoutParams(cw, ch, GravityFlags.Center);
+                        _view.RequestLayout();
+                    }
+                    if (_game != null)
+                    {
+                        Client.Main.MuGame.ScheduleOnMainThread(() => _game.ApplyMobileDisplaySize(cw, ch));
                     }
                 };
                 SetContentView(rootContainer);
