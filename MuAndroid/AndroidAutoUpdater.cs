@@ -63,7 +63,11 @@ namespace MuAndroid
                 using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
                 http.DefaultRequestHeaders.UserAgent.ParseAdd("MuMono-Android-Updater/1.0");
 
-                string url = $"{VersionManifestUrl}?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                string manifestBase = !string.IsNullOrWhiteSpace(Client.Main.MuGame.AppSettings?.MobileUpdateManifestUrl)
+                    ? Client.Main.MuGame.AppSettings.MobileUpdateManifestUrl
+                    : VersionManifestUrl;
+                string sep = manifestBase.Contains('?') ? "&" : "?";
+                string url = $"{manifestBase}{sep}t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
                 string json = await http.GetStringAsync(url).ConfigureAwait(false);
                 var remote = JsonSerializer.Deserialize<RemoteVersionInfo>(json);
 

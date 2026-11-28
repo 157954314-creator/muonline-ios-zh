@@ -590,15 +590,36 @@ namespace Client.Main
                 }
 
                 AppSettings.QuickLogin ??= new QuickLoginSettings();
-                AppSettings.QuickLogin.Enabled = true;
-                AppSettings.QuickLogin.AutoSelectServer = true;
-                AppSettings.QuickLogin.AutoSubmit = true;
-                if (string.IsNullOrWhiteSpace(AppSettings.QuickLogin.Username) ||
-                    string.Equals(AppSettings.QuickLogin.Username, "test0", StringComparison.OrdinalIgnoreCase))
+                if (AppSettings.MobilePublicReleaseMode)
                 {
-                    AppSettings.QuickLogin.Username = "test1";
-                    AppSettings.QuickLogin.Password = "test1";
-                    AppSettings.QuickLogin.ServerIndex = 0;
+                    // Public release mode: never hardcode dev account "test0"/"test1".
+                    // First launch prompts player to enter their own credentials; subsequent launches
+                    // automatically remember and log in with their saved account.
+                    if (string.Equals(AppSettings.QuickLogin.Username, "test0", StringComparison.OrdinalIgnoreCase))
+                    {
+                        AppSettings.QuickLogin.Enabled = false;
+                        AppSettings.QuickLogin.Username = string.Empty;
+                        AppSettings.QuickLogin.Password = string.Empty;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(AppSettings.QuickLogin.Username))
+                    {
+                        AppSettings.QuickLogin.Enabled = true;
+                        AppSettings.QuickLogin.AutoSelectServer = true;
+                        AppSettings.QuickLogin.AutoSubmit = true;
+                    }
+                }
+                else
+                {
+                    AppSettings.QuickLogin.Enabled = true;
+                    AppSettings.QuickLogin.AutoSelectServer = true;
+                    AppSettings.QuickLogin.AutoSubmit = true;
+                    if (string.IsNullOrWhiteSpace(AppSettings.QuickLogin.Username) ||
+                        string.Equals(AppSettings.QuickLogin.Username, "test0", StringComparison.OrdinalIgnoreCase))
+                    {
+                        AppSettings.QuickLogin.Username = "test1";
+                        AppSettings.QuickLogin.Password = "test1";
+                        AppSettings.QuickLogin.ServerIndex = 0;
+                    }
                 }
             }
 

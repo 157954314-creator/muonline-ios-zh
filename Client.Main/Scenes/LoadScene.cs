@@ -274,19 +274,21 @@ namespace Client.Main.Scenes
 
         private async Task DownloadAndExtractAssetsAsync(string localZip, string extractPath, CancellationToken ct)
         {
+            bool zh = Localization.Loc.IsChinese;
             string[] urls = {
-            //    _dataPathUrl,
+                MuGame.AppSettings?.MobileDataZipUrl,
+                _dataPathUrl,
                 Constants.DefaultDataPathUrl
             };
             Exception lastError = null;
 
-            foreach (var url in urls.Where(u => !string.IsNullOrEmpty(u)))
+            foreach (var url in urls.Where(u => !string.IsNullOrWhiteSpace(u)).Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 try
                 {
                     UpdateProgress(p =>
                     {
-                        p.StatusText = "Connecting...";
+                        p.StatusText = zh ? "正在连接资源服务器..." : "Connecting...";
                         p.IsDownloading = true;
                         p.Progress = 0;
                     });
@@ -313,25 +315,25 @@ namespace Client.Main.Scenes
                     lastError = ex;
                     Debug.WriteLine($"[LoadScene] Download failed from {url}: {ex.Message}");
                     SafeDeleteFile(localZip);
-                    UpdateProgress(p => p.StatusText = "Trying alternative source...");
+                    UpdateProgress(p => p.StatusText = zh ? "正在切换备用下载源..." : "Trying alternative source...");
                     await Task.Delay(RetryDelayMs, ct);
                 }
             }
 
             if (lastError != null)
-                throw new InvalidOperationException("Failed to download from all sources.", lastError);
+                throw new InvalidOperationException(zh ? "资源包下载失败，请检查网络后重试。" : "Failed to download from all sources.", lastError);
 
             // Extract
             UpdateProgress(p =>
             {
-                p.StatusText = "Extracting...";
+                p.StatusText = zh ? "正在解压游戏资源（首次启动需几分钟）..." : "Extracting...";
                 p.IsDownloading = false;
                 p.Progress = 0f;
             });
 
             await ExtractZipWithProgressAsync(localZip, extractPath, ct);
 
-            UpdateProgress(p => p.StatusText = "Cleaning up...");
+            UpdateProgress(p => p.StatusText = zh ? "正在清理临时文件..." : "Cleaning up...");
             SafeDeleteFile(localZip);
         }
 

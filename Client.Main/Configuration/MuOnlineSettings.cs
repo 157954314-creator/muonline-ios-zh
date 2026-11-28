@@ -154,6 +154,11 @@ namespace Client.Main.Configuration
         public PacketLoggingSettings PacketLogging { get; set; } = new();
         public GraphicsSettings Graphics { get; set; } = new();
         public EnvironmentSettings Environment { get; set; } = new();
+        // Mobile public release distribution settings (OSS/COS CDN + player login mode)
+        public string MobileDataZipUrl { get; set; } = string.Empty;
+        public string MobileUpdateManifestUrl { get; set; } = string.Empty;
+        public bool MobilePublicReleaseMode { get; set; } = false;
+
         public UiSettings Ui { get; set; } = new();
         public QuickLoginSettings QuickLogin { get; set; } = new();
     }
