@@ -101,8 +101,8 @@ namespace Client.Main.Graphics
             if (preset != GraphicsQualityPreset.Auto)
                 return preset;
 
-            if (OperatingSystem.IsAndroid())
-                return GraphicsQualityPreset.Low;
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+                return GraphicsQualityPreset.High;
 
             LastAdapterInfo = GetAdapterInfo(adapter);
 
@@ -186,6 +186,16 @@ namespace Client.Main.Graphics
             if (!Constants.ENABLE_DYNAMIC_LIGHTING_SHADER)
             {
                 Constants.ENABLE_TERRAIN_GPU_LIGHTING = false;
+            }
+
+            // On mobile OpenGL ES, keep native 1.0x resolution + full dynamic lights, item/monster
+            // material shaders, weapon trails, high-quality textures, and grass, while keeping
+            // desktop-heavy offscreen MSAA/SSAO passes off for smooth FPS and GLES stability.
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+            {
+                Constants.MSAA_SAMPLES = 0;
+                Constants.ENABLE_SSAO = false;
+                Constants.ENABLE_WORLD_BLOOM = false;
             }
         }
 

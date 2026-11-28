@@ -406,11 +406,6 @@ namespace Client.Main.Controls.UI
             if (Status != GameControlStatus.Ready || !Visible || _font == null)
                 return;
 
-            // On mobile, keep the top-left uncluttered by hiding the idle chat/system log box
-            // unless the user explicitly opens the chat frame.
-            if ((OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) && !_showFrame)
-                return;
-
             if (IsSeason6)
             {
                 DrawSeason6(gameTime);
@@ -450,8 +445,10 @@ namespace Client.Main.Controls.UI
                 if (drawCount < _showingLines)
                     y += (_showingLines - drawCount) * _lineHeight;
 
-                // When frame is hidden, draw one clean unified obsidian card behind the active lines
-                if (!_showFrame && pixel != null && drawCount > 0)
+                // When frame is hidden on desktop, draw one clean unified obsidian card behind the active lines.
+                // On mobile, omit the dark box/border so pickup/EXP/system text floats cleanly over the 3D scene.
+                if (!_showFrame && pixel != null && drawCount > 0 &&
+                    !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS())
                 {
                     float maxLineW = 0f;
                     for (int i = first; i <= last; i++)
