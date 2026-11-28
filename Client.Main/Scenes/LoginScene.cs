@@ -343,17 +343,28 @@ namespace Client.Main.Scenes
 
                 if (showErrorAndExit)
                 {
-                    if (!Controls.OfType<MessageWindow>().Any(mw => mw.Text.Contains("Connection lost")))
+                    string lostText = Localization.Loc.IsChinese
+                        ? "与服务器断开连接，点击确定重新连接。"
+                        : "Connection lost to the server.";
+                    if (!Controls.OfType<MessageWindow>().Any(mw => mw.Text.Contains("Connection lost") || mw.Text.Contains("断开连接")))
                     {
-                        MessageWindow msg = MessageWindow.Show("Connection lost to the server.");
+                        MessageWindow msg = MessageWindow.Show(lostText);
                         if (msg != null)
                         {
                             msg.Closed += (s, e) =>
                             {
-                                _logger.LogInformation("Closing game after connection lost message.");
+                                if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+                                {
+                                    _logger.LogInformation("Reconnecting to Connect Server after disconnect on mobile.");
+                                    _ = _networkManager.ConnectToConnectServerAsync();
+                                }
+                                else
+                                {
+                                    _logger.LogInformation("Closing game after connection lost message.");
 #if !IOS
-                                MuGame.ScheduleOnMainThread(() => MuGame.Instance.Exit());
+                                    MuGame.ScheduleOnMainThread(() => MuGame.Instance.Exit());
 #endif
+                                }
                             };
                         }
                         else

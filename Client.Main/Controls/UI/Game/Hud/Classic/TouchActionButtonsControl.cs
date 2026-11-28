@@ -233,6 +233,15 @@ namespace Client.Main.Controls.UI.Game.Hud
             if (!Visible || Scene is not GameScene gs)
                 return;
 
+            if (gs.GuildInfo?.Visible == true || gs.GuildCreate?.Visible == true || gs.InventoryControl?.Visible == true)
+            {
+                _attackPressed = false;
+                _pkPressed = false;
+                _lockPressed = false;
+                _pressedSkill = -1;
+                return;
+            }
+
             LayoutButtons();
             bool modernOverlay = IsModernOverlay;
             var skills = Skills;
@@ -357,6 +366,8 @@ namespace Client.Main.Controls.UI.Game.Hud
         public override void Draw(GameTime gameTime)
         {
             if (!Visible || Scene is not GameScene gs) return;
+            if (gs.GuildInfo?.Visible == true || gs.GuildCreate?.Visible == true || gs.InventoryControl?.Visible == true)
+                return;
             var sb = GraphicsManager.Instance?.Sprite;
             if (sb == null) return;
 

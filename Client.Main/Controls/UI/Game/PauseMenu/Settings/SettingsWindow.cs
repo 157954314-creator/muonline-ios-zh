@@ -37,6 +37,8 @@ namespace Client.Main.Controls.UI.Game.PauseMenu.Settings
         {
             Title = Localization.Loc.IsChinese ? "系统设置" : "SETTINGS";
             ShowCloseButton = true;
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+                Margin = new Client.Main.Models.Margin { Bottom = 56 };
             _categories = SettingsCatalog.Create(() => _rebuildRequested = true);
             SelectCategory(0);
         }
@@ -365,7 +367,9 @@ namespace Client.Main.Controls.UI.Game.PauseMenu.Settings
                     break;
                 case SettingChoice choice:
                     int current = choice.GetIndex();
-                    string text = current >= 0 && current < choice.Choices.Count ? choice.Choices[current] : "Custom";
+                    string text = current >= 0 && current < choice.Choices.Count
+                        ? choice.Choices[current]
+                        : (Localization.Loc.IsChinese ? "自定义" : "Custom");
                     OrnateWidgets.Choice(sb, control, text,
                         canLeft: current != 0 && choice.Choices.Count > 0,
                         canRight: current < choice.Choices.Count - 1,
