@@ -590,14 +590,15 @@ namespace Client.Main
                 }
 
                 AppSettings.QuickLogin ??= new QuickLoginSettings();
-                if (string.IsNullOrWhiteSpace(AppSettings.QuickLogin.Username))
+                AppSettings.QuickLogin.Enabled = true;
+                AppSettings.QuickLogin.AutoSelectServer = true;
+                AppSettings.QuickLogin.AutoSubmit = true;
+                if (string.IsNullOrWhiteSpace(AppSettings.QuickLogin.Username) ||
+                    string.Equals(AppSettings.QuickLogin.Username, "test0", StringComparison.OrdinalIgnoreCase))
                 {
-                    AppSettings.QuickLogin.Enabled = true;
                     AppSettings.QuickLogin.Username = "test1";
                     AppSettings.QuickLogin.Password = "test1";
                     AppSettings.QuickLogin.ServerIndex = 0;
-                    AppSettings.QuickLogin.AutoSelectServer = true;
-                    AppSettings.QuickLogin.AutoSubmit = true;
                 }
             }
 

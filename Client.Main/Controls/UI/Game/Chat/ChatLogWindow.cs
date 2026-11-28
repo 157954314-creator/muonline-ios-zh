@@ -406,6 +406,11 @@ namespace Client.Main.Controls.UI
             if (Status != GameControlStatus.Ready || !Visible || _font == null)
                 return;
 
+            // On mobile, keep the top-left uncluttered by hiding the idle chat/system log box
+            // unless the user explicitly opens the chat frame.
+            if ((OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) && !_showFrame)
+                return;
+
             if (IsSeason6)
             {
                 DrawSeason6(gameTime);

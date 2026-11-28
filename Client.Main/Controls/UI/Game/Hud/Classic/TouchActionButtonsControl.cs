@@ -394,7 +394,19 @@ namespace Client.Main.Controls.UI.Game.Hud
                         sb.Draw(_texHoleBase, inner, Color.White * a);
                 }
 
-                if (_texSocketRing == null && Tex(_texSkillFrame))
+                if (modernOverlay && pixel != null)
+                {
+                    if (!drewIcon)
+                    {
+                        DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 1f, new Color(16, 18, 24) * (0.76f * a));
+                        DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, new Color(195, 160, 95) * (0.90f * a));
+                    }
+                    else
+                    {
+                        DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, new Color(225, 185, 105) * (0.94f * a));
+                    }
+                }
+                else if (_texSocketRing == null && Tex(_texSkillFrame))
                     sb.Draw(_texSkillFrame, rect, Color.White * (skill != null ? a : a * 0.9f));
                 else if (!drewIcon && _texSocketRing == null && pixel != null)
                 {

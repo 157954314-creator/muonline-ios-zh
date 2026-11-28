@@ -57,13 +57,14 @@ namespace Client.Main.Networking
                 return;
 
             var state = network.CurrentState;
+            IReadOnlyList<ServerInfo>? servers = (_servers is { Count: > 0 }) ? _servers : network.GetCachedServerList();
             if (settings.AutoSelectServer && !_serverRequested &&
                 state == ClientConnectionState.ReceivedServerList &&
-                _servers is { Count: > 0 })
+                servers is { Count: > 0 })
             {
                 _serverRequested = true;
-                int idx = Math.Clamp(settings.ServerIndex, 0, _servers.Count - 1);
-                _ = network.RequestGameServerConnectionAsync(_servers[idx].ServerId);
+                int idx = Math.Clamp(settings.ServerIndex, 0, servers.Count - 1);
+                _ = network.RequestGameServerConnectionAsync(servers[idx].ServerId);
             }
             else if (settings.AutoSubmit && !_loginSent &&
                      state == ClientConnectionState.ConnectedToGameServer)
