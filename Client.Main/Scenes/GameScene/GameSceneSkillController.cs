@@ -461,7 +461,7 @@ namespace Client.Main.Scenes
                 return monster.NetworkId;
             }
 
-            if (hoveredTarget is PlayerObject player && !player.IsDead && _isDuelAttackTarget(player))
+            if (hoveredTarget is PlayerObject player && !player.IsDead && _scene.CanAttackPlayer(player))
             {
                 hero.FaceTowardsObject(player, immediate: true);
                 return player.NetworkId;
@@ -525,10 +525,7 @@ namespace Client.Main.Scenes
 
             if (_scene.MouseHoverObject is PlayerObject player)
             {
-                if (player != _scene.Hero &&
-                    !player.IsDead &&
-                    player.World == _scene.World &&
-                    _isDuelAttackTarget(player))
+                if (_scene.CanAttackPlayer(player))
                 {
                     return player;
                 }
@@ -743,6 +740,156 @@ namespace Client.Main.Scenes
         /// Target skills use the nearest monster, area skills use that monster's position,
         /// and self skills target the player's own character.
         /// </summary>
+        /// <summary>
+        /// Smart touch skill execution supporting PvP player lock, open-world PK mode,
+        /// auto-chase into skill range, and joystick-directional Wizard Teleport.
+        /// </summary>
+        internal bool CastSkillFromTouch(Core.Client.SkillEntryState skill, Vector2 worldMoveDirection, bool justPressed)
+        {
+            var hero = _scene.Hero;
+            if (skill == null || hero == null || hero.IsDead || _scene.World is not WalkableWorldControl walkableWorld)
+                return false;
+
+            if (IsDarkRavenCommandSkill(skill.SkillId))
+            {
+                TryUseDarkRavenCommand(skill.SkillId, hero, justPressed);
+                return true;
+            }
+
+            if (skill.SkillId == NovaSkillId)
+            {
+                TryStartNovaCharge(skill, hero, walkableWorld, justPressed);
+                return true;
+            }
+
+            var terrainFlags = walkableWorld.Terrain.RequestTerrainFlag((int)hero.Location.X, (int)hero.Location.Y);
+            if (terrainFlags.HasFlag(TWFlags.SafeZone))
+                return false;
+
+            uint allowedRange = SkillDatabase.GetSkillRange(skill.SkillId);
+
+            // Wizard Teleport (SkillId 6): blink in current joystick direction (or hero facing direction)
+            if (skill.SkillId == TeleportSkillId)
+            {
+                if (!justPressed)
+                    return false;
+
+                Vector2 dir = worldMoveDirection;
+                if (dir.LengthSquared() < 0.001f)
+                {
+                    float az = hero.Angle.Z;
+                    dir = new Vector2(MathF.Sin(az), -MathF.Cos(az));
+                }
+                if (dir.LengthSquared() < 0.001f)
+                    dir = new Vector2(1f, 0f);
+                else
+                    dir.Normalize();
+
+                int maxStep = (int)Math.Clamp(allowedRange > 0 ? allowedRange : 6u, 2u, 6u);
+                for (int step = maxStep; step >= 2; step--)
+                {
+                    int tx = (int)MathF.Round(hero.Location.X + dir.X * step);
+                    int ty = (int)MathF.Round(hero.Location.Y + dir.Y * step);
+                    if (tx < 0 || ty < 0 || tx >= Constants.TERRAIN_SIZE || ty >= Constants.TERRAIN_SIZE)
+                        continue;
+                    var destTile = new Vector2(tx, ty);
+                    if (!walkableWorld.IsWalkable(destTile))
+                        continue;
+                    var destFlags = walkableWorld.Terrain.RequestTerrainFlag(tx, ty);
+                    if (destFlags.HasFlag(TWFlags.SafeZone))
+                        continue;
+                    if (IsInSkillRange(destTile, allowedRange > 0 ? allowedRange : 6u))
+                        return UseAreaSkill(skill, 0, destTile);
+                }
+                return false;
+            }
+
+            if (SkillDatabase.IsSelfSkill(skill.SkillId) || skill.SkillId == SoulBarrierSkillId ||
+                IsElfSupportSkill(skill.SkillId))
+            {
+                return UseSelfSkill(skill, hero);
+            }
+
+            // Caster-centered AoE skills (Evil Spirit, Hellfire, Inferno, Twisting Slash, etc.) fire immediately!
+            if (IsAreaSkill(skill.SkillId) &&
+                skill.SkillId is HellFireSkillId or InfernoSkillId or EvilSpiritSkillId or 41 or 330 or 332 or 481)
+            {
+                WalkerObject nearTarget = ResolvePrimaryCombatTarget(10f);
+                return UseAreaSkill(skill, nearTarget?.NetworkId ?? 0);
+            }
+
+            WalkerObject target = ResolvePrimaryCombatTarget(13f);
+            if (target == null)
+            {
+                if (IsAreaSkill(skill.SkillId) && !RequiresAreaTarget(skill.SkillId) && skill.SkillId != 76)
+                    return UseAreaSkill(skill, 0, hero.Location);
+                return false;
+            }
+
+            if (IsAreaSkill(skill.SkillId))
+            {
+                if (IsInSkillRange(target.Location, allowedRange))
+                    return UseAreaSkill(skill, target.NetworkId, target.Location);
+                QueueSkillCast(skill, target, allowedRange, isAreaSkill: true);
+                return true;
+            }
+
+            if (target is PlayerObject targetPlayer)
+            {
+                if (IsInSkillRange(targetPlayer.Location, allowedRange))
+                    return UseSkillOnPlayerTarget(skill, targetPlayer);
+                QueueSkillCast(skill, targetPlayer, allowedRange, isAreaSkill: false);
+                return true;
+            }
+
+            if (target is MonsterObject targetMonster)
+            {
+                if (IsInSkillRange(targetMonster.Location, allowedRange))
+                    return UseSkillOnTarget(skill, targetMonster);
+                QueueSkillCast(skill, targetMonster, allowedRange, isAreaSkill: false);
+                return true;
+            }
+
+            return false;
+        }
+
+        private WalkerObject ResolvePrimaryCombatTarget(float maxTiles)
+        {
+            var state = MuGame.Network?.GetCharacterState();
+            bool preferPlayer = _scene.IsPkModeEnabled ||
+                                _scene.LockedPvpTargetId != 0 ||
+                                state?.IsDuelActive == true;
+            if (preferPlayer)
+            {
+                PlayerObject pvpTarget = _scene.GetLockedOrNearestPvpTarget(maxTiles);
+                if (pvpTarget != null && _scene.CanAttackPlayer(pvpTarget))
+                    return pvpTarget;
+            }
+
+            var world = _scene.World;
+            var hero = _scene.Hero;
+            if (world?.Monsters == null || hero == null)
+                return null;
+
+            MonsterObject nearest = null;
+            float best = maxTiles * maxTiles;
+            var hloc = hero.Location;
+            var monsters = world.Monsters;
+            for (int i = 0; i < monsters.Count; i++)
+            {
+                var m = monsters[i];
+                if (m == null || m.IsDead || m.IsSummoned || m.World != world)
+                    continue;
+                float d = Vector2.DistanceSquared(hloc, m.Location);
+                if (d < best)
+                {
+                    best = d;
+                    nearest = m;
+                }
+            }
+            return nearest;
+        }
+
         internal bool CastSkillFromHotbar(Core.Client.SkillEntryState skill, MonsterObject target)
         {
             var hero = _scene.Hero;
@@ -825,7 +972,7 @@ namespace Client.Main.Scenes
         private bool CanUseSkillOnPlayer(ushort skillId, PlayerObject target) =>
             skillId is InvisibilitySkillId or CancelInvisibilitySkillId or AbolishMagicSkillId ||
             IsElfSupportSkill(skillId) ||
-            (skillId == SoulBarrierSkillId ? IsPartyMember(target) : _isDuelAttackTarget(target));
+            (skillId == SoulBarrierSkillId ? IsPartyMember(target) : _scene.CanAttackPlayer(target));
 
         private bool UseAreaSkill(Core.Client.SkillEntryState skill, ushort extraTargetId = 0, Vector2? targetLocationOverride = null)
         {

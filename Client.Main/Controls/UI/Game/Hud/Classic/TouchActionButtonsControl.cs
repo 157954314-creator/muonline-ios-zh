@@ -87,8 +87,12 @@ namespace Client.Main.Controls.UI.Game.Hud
 
         private Rectangle _attackRect;
         private Rectangle _resetRect;
+        private Rectangle _pkModeRect;
         private readonly Rectangle[] _skillRects = new Rectangle[SkillArc.Length];
+        private readonly int[] _modernArcHotbarIndices = new int[3];
         private bool _attackPressed;
+        private bool _pkPressed;
+        private bool _lockPressed;
         private int _pressedSkill = -1;
 
         /// <summary>
@@ -129,6 +133,39 @@ namespace Client.Main.Controls.UI.Game.Hud
 
         private bool IsModernOverlay => UiThemeManager.CurrentId == UiThemeId.Modern;
 
+        private SkillEntryState ResolveModernMainSkill(GameScene gs, IReadOnlyList<SkillEntryState> skills)
+        {
+            var selected = gs.ModernHud?.SelectedSkill;
+            if (selected != null)
+                return selected;
+            for (int i = 0; i < skills.Count; i++)
+            {
+                if (skills[i] != null)
+                    return skills[i];
+            }
+            return null;
+        }
+
+        private void RebuildModernArcMapping(GameScene gs, IReadOnlyList<SkillEntryState> skills)
+        {
+            var mainSkill = ResolveModernMainSkill(gs, skills);
+            int filled = 0;
+            for (int slot = 0; slot < 6 && filled < _modernArcHotbarIndices.Length; slot++)
+            {
+                var candidate = slot < skills.Count ? skills[slot] : null;
+                if (mainSkill != null && candidate != null && candidate.SkillId == mainSkill.SkillId && slot == 0)
+                    continue;
+                if (mainSkill == null && slot == 0)
+                    continue;
+                _modernArcHotbarIndices[filled++] = slot;
+            }
+            while (filled < _modernArcHotbarIndices.Length)
+            {
+                _modernArcHotbarIndices[filled] = filled + 1;
+                filled++;
+            }
+        }
+
         private void LayoutButtons()
         {
             // Canto inferior direito da tela em coords de UI virtual, levantado acima do HUD.
@@ -143,10 +180,21 @@ namespace Client.Main.Controls.UI.Game.Hud
             var ac = new Vector2(cornerX + AttackCenter.X, cornerY - AttackCenter.Y);
             _attackRect = CenteredRect(ac, AttackSize / 2f);
 
-            // In Modern overlay mode, place the Pickup ("拾") button comfortably left of Attack.
-            var auxOffset = modernOverlay ? new Vector2(-216f, 52f) : ResetCenter;
-            var resetCenter = new Vector2(cornerX + auxOffset.X, cornerY - auxOffset.Y);
+            // In Modern PK overlay: two dedicated tactical buttons left of Main Skill:
+            // Upper-left: [和平 / PK] mode toggle; Lower-left: [锁人] PvP target lock/cycle.
+            var lockOffset = modernOverlay ? new Vector2(-214f, 50f) : ResetCenter;
+            var resetCenter = new Vector2(cornerX + lockOffset.X, cornerY - lockOffset.Y);
             _resetRect = CenteredRect(resetCenter, ResetSize / 2f);
+
+            if (modernOverlay)
+            {
+                var pkCenter = new Vector2(cornerX - 214f, cornerY - 116f);
+                _pkModeRect = CenteredRect(pkCenter, ResetSize / 2f);
+            }
+            else
+            {
+                _pkModeRect = Rectangle.Empty;
+            }
 
             BuildFan();
             for (int i = 0; i < SkillArc.Length; i++)
@@ -159,10 +207,11 @@ namespace Client.Main.Controls.UI.Game.Hud
         private IReadOnlyList<SkillEntryState> Skills =>
             (Scene as GameScene)?.ModernHud?.HotbarSkills ?? System.Array.Empty<SkillEntryState>();
 
-        // Quantas posições do arco exibir: 4 (Set 1 / Modern overlay) ou 7 (Set 2).
+        // Modern PK overlay shows exactly 3 cohesive arc slots (Combo 2/3 + Control/Teleport 4)
+        // around 1 Main Skill button so players never feel overwhelmed during PK.
         private int VisibleCount =>
             IsModernOverlay
-                ? 4
+                ? 3
                 : System.Math.Min(SkillArc.Length, (Scene as GameScene)?.ModernHud?.VisibleSkillCount ?? SkillCount);
 
         public override void Update(GameTime gameTime)
@@ -172,11 +221,17 @@ namespace Client.Main.Controls.UI.Game.Hud
                 return;
 
             LayoutButtons();
+            bool modernOverlay = IsModernOverlay;
+            var skills = Skills;
+            if (modernOverlay)
+                RebuildModernArcMapping(gs, skills);
 
             // Em fade (menu/painel abertos) o cluster não captura toques.
             if (MasterAlpha < 0.95f)
             {
                 _attackPressed = false;
+                _pkPressed = false;
+                _lockPressed = false;
                 _pressedSkill = -1;
                 return;
             }
@@ -188,9 +243,10 @@ namespace Client.Main.Controls.UI.Game.Hud
             var p = new Point(mouse.Position.X, mouse.Position.Y);
 
             _attackPressed = down && _attackRect.Contains(p);
+            _pkPressed = modernOverlay && down && _pkModeRect.Contains(p);
+            _lockPressed = down && _resetRect.Contains(p);
             _pressedSkill = -1;
 
-            var skills = Skills;
             // Skills têm prioridade de toque sobre o ataque (ficam por cima no arco).
             int hitSkill = -1;
             int visible = VisibleCount;
@@ -200,29 +256,53 @@ namespace Client.Main.Controls.UI.Game.Hud
             }
             if (down && hitSkill >= 0) _pressedSkill = hitSkill;
 
-            if (justPressed && hitSkill >= 0)
+            if (hitSkill >= 0 && down)
             {
                 Scene.SetMouseInputConsumed();
-                SkillEntryState skill = hitSkill < skills.Count ? skills[hitSkill] : null;
+                int hotbarIndex = modernOverlay ? _modernArcHotbarIndices[hitSkill] : hitSkill;
+                SkillEntryState skill = hotbarIndex < skills.Count ? skills[hotbarIndex] : null;
                 if (skill != null)
-                    CastSkill(gs, skill);
-                else
-                    gs.ModernHud?.BeginSkillAssignment(hitSkill);
+                {
+                    if (modernOverlay)
+                        gs.SkillController?.CastSkillFromTouch(skill, gs.JoystickWorldDirection, justPressed);
+                    else if (justPressed)
+                        CastSkill(gs, skill);
+                }
+                else if (justPressed)
+                {
+                    gs.ModernHud?.BeginSkillAssignment(hotbarIndex);
+                }
+            }
+            else if (modernOverlay && justPressed && _pkModeRect.Contains(p))
+            {
+                Scene.SetMouseInputConsumed();
+                gs.TogglePkMode();
             }
             else if (justPressed && _resetRect.Contains(p))
             {
                 Scene.SetMouseInputConsumed();
-                if (IsModernOverlay)
-                    gs.PickupNearestItem();
+                if (modernOverlay)
+                    gs.CyclePvpTarget();
                 else
                     gs.ModernHud?.ResetActiveSkillSet();
             }
-            else if (justPressed && _attackRect.Contains(p))
+            else if (_attackRect.Contains(p) && down)
             {
                 Scene.SetMouseInputConsumed();
-                DoAttack(gs);
+                if (modernOverlay)
+                {
+                    var mainSkill = ResolveModernMainSkill(gs, skills);
+                    if (mainSkill != null)
+                        gs.SkillController?.CastSkillFromTouch(mainSkill, gs.JoystickWorldDirection, justPressed);
+                    else if (justPressed)
+                        gs.ModernHud?.BeginSkillAssignment(0);
+                }
+                else if (justPressed)
+                {
+                    DoAttack(gs);
+                }
             }
-            else if (down && (_attackRect.Contains(p) || _resetRect.Contains(p) || hitSkill >= 0))
+            else if (down && (_pkModeRect.Contains(p) || _resetRect.Contains(p)))
             {
                 Scene.SetMouseInputConsumed();
             }
@@ -268,9 +348,13 @@ namespace Client.Main.Controls.UI.Game.Hud
             if (sb == null) return;
 
             LayoutButtons();
+            bool modernOverlay = IsModernOverlay;
             var skills = Skills;
+            if (modernOverlay)
+                RebuildModernArcMapping(gs, skills);
 
             var pixel = GraphicsManager.Instance?.Pixel;
+            var font = GraphicsManager.Instance?.SmallFont ?? GraphicsManager.Instance?.Font;
 
             // Botões de skill: disco escuro translúcido (fundo do slot, como na referência)
             // + o aro mi_skill_frame por cima. Ícone só quando há skill no slot da hotbar.
@@ -289,21 +373,13 @@ namespace Client.Main.Controls.UI.Game.Hud
             int visibleDraw = VisibleCount;
             for (int i = 0; i < _skillRects.Length && i < visibleDraw; i++)
             {
-                var skill = (i < skills.Count) ? skills[i] : null;
+                int hotbarIndex = modernOverlay ? _modernArcHotbarIndices[i] : i;
+                var skill = (hotbarIndex < skills.Count) ? skills[hotbarIndex] : null;
                 float a = ((_pressedSkill == i) ? 0.7f : 1f) * MasterAlpha;
                 var rect = (_pressedSkill == i) ? Shrink(_skillRects[i], 3) : _skillRects[i];
-                // Pilha de soquete da tela Skill Settings (efeito aprovado): aro prateado
-                // embaixo, disco escuro (vazio) OU ícone (cheio) cobrindo a borda interna
-                // do aro, glow quente por cima. Proporções do settings (ícone 75):
-                // aro 88/75, base 75/75, glow 70/75.
-                const float InnerScale = 0.855f; // base do slot VAZIO um pouco menor (borda fina)
+                const float InnerScale = 0.855f;
                 var inner = ScaledRect(rect, InnerScale);
 
-                // ── EFEITO DE BORDA (ideia do usuário) ──────────────────────────────────
-                // Slot COM skill: a skill preenche 100% do círculo (rect cheio) e o glow vem
-                // por cima 15% MENOR (0.85). Assim a skill vai até a borda e o glow forma o
-                // anel interno = a "borda que faz parte da skill".
-                // Slot VAZIO: aro escuro (socket_ring) + base translúcida (inner).
                 bool drewIcon = skill != null && DrawSkillIcon(sb, rect, skill, a);
                 if (drewIcon)
                 {
@@ -320,69 +396,125 @@ namespace Client.Main.Controls.UI.Game.Hud
 
                 if (_texSocketRing == null && Tex(_texSkillFrame))
                     sb.Draw(_texSkillFrame, rect, Color.White * (skill != null ? a : a * 0.9f));
+
+                if (modernOverlay && font != null)
+                {
+                    string slotNum = ((hotbarIndex + 1) % 10).ToString();
+                    const float badgeScale = 0.56f;
+                    var bsz = font.MeasureString(slotNum) * badgeScale;
+                    var bpos = new Vector2(rect.Right - bsz.X - 4f, rect.Bottom - bsz.Y - 2f);
+                    sb.DrawString(font, slotNum, bpos + Vector2.One, Color.Black * 0.9f * a, 0f, Vector2.Zero, badgeScale, SpriteEffects.None, 0f);
+                    sb.DrawString(font, slotNum, bpos, new Color(255, 220, 130) * a, 0f, Vector2.Zero, badgeScale, SpriteEffects.None, 0f);
+                }
             }
 
-            // Dedicated circular reset target for touch users. It clears the active set,
-            // not learned skills or server-side character data.
+            // Upper-left tactical button in Modern overlay: [和平 / PK] Mode Toggle
+            if (modernOverlay && _pkModeRect != Rectangle.Empty)
             {
-                float a = MasterAlpha;
-                var rect = _resetRect;
+                bool pkOn = gs.IsPkModeEnabled;
+                float a = (_pkPressed ? 0.75f : 1f) * MasterAlpha;
+                var rect = _pkPressed ? Shrink(_pkModeRect, 2) : _pkModeRect;
+                Color ringTint = pkOn ? new Color(255, 95, 95) : new Color(130, 235, 165);
                 if (Tex(_texSocketRing))
-                    sb.Draw(_texSocketRing, ScaledRect(rect, 88f / 75f), Color.White * a);
+                    sb.Draw(_texSocketRing, ScaledRect(rect, 88f / 75f), ringTint * a);
                 if (Tex(_texHoleBase))
-                    sb.Draw(_texHoleBase, ScaledRect(rect, 0.855f), Color.White * a);
+                    sb.Draw(_texHoleBase, ScaledRect(rect, 0.855f), (pkOn ? new Color(180, 40, 40) : Color.White) * a);
 
-                var font = GraphicsManager.Instance?.Font;
                 if (font != null)
                 {
-                    bool modernOverlay = IsModernOverlay;
-                    float textScale = modernOverlay ? 0.50f : 0.56f;
+                    const float textScale = 0.62f;
+                    string text = pkOn
+                        ? "PK"
+                        : (Localization.Loc.IsChinese ? "和平" : "SAFE");
+                    var size = font.MeasureString(text) * textScale;
+                    var pos = new Vector2(rect.X + (rect.Width - size.X) / 2f, rect.Y + (rect.Height - size.Y) / 2f);
+                    Color textCol = pkOn ? new Color(255, 115, 105) : new Color(135, 240, 165);
+                    sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.9f * a, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                    sb.DrawString(font, text, pos, textCol * a, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                }
+            }
+
+            // Lower-left tactical button: [锁人] PvP Target Lock/Cycle in Modern overlay (or Reset in Classic)
+            {
+                float a = (_lockPressed ? 0.75f : 1f) * MasterAlpha;
+                var rect = _lockPressed ? Shrink(_resetRect, 2) : _resetRect;
+                bool hasLock = modernOverlay && gs.LockedPvpTargetId != 0;
+                Color ringTint = hasLock ? new Color(255, 90, 90) : Color.White;
+                if (Tex(_texSocketRing))
+                    sb.Draw(_texSocketRing, ScaledRect(rect, 88f / 75f), ringTint * a);
+                if (Tex(_texHoleBase))
+                    sb.Draw(_texHoleBase, ScaledRect(rect, 0.855f), (hasLock ? new Color(150, 40, 40) : Color.White) * a);
+
+                if (font != null)
+                {
+                    float textScale = modernOverlay ? 0.60f : 0.56f;
                     string text = modernOverlay
-                        ? (Localization.Loc.IsChinese ? "拾取" : "PICK")
+                        ? (Localization.Loc.IsChinese ? "锁人" : "LOCK")
                         : "R";
                     var size = font.MeasureString(text) * textScale;
                     var pos = new Vector2(
                         rect.X + (rect.Width - size.X) / 2f,
                         rect.Y + (rect.Height - size.Y) / 2f);
-                    sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.8f * a,
+                    Color textCol = hasLock ? new Color(255, 130, 120) : new Color(235, 200, 120);
+                    sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.85f * a,
                         0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
-                    sb.DrawString(font, text, pos, new Color(235, 200, 120) * a,
+                    sb.DrawString(font, text, pos, textCol * a,
                         0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
                 }
             }
 
-            // Botão de ataque (o maior): disco escuro + aro Attack.png do mobile (o mesmo
-            // da tela Skill Settings) emoldurando o emblema.
+            // Main Corner Button: in Modern PK overlay, renders Current Main Skill (hold-to-repeat!),
+            // completely eliminating the unused Basic Attack button.
             {
-                float a = (_attackPressed ? 0.7f : 1f) * MasterAlpha;
+                float a = (_attackPressed ? 0.72f : 1f) * MasterAlpha;
                 var rect = _attackPressed ? Shrink(_attackRect, 4) : _attackRect;
-                // SEM DrawDisc embaixo: o scanline tem borda dura (escada) e vaza além do
-                // aro — o interior escuro já vem ASSADO no Attack.png, como no settings.
                 if (pixel != null && !Tex(_texAttackRing))
                     DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 2f, new Color(22, 20, 18) * (0.80f * a));
                 if (Tex(_texAttackRing))
                 {
-                    // Attack.png é 142x133 (não quadrado) e tem interior escuro assado:
-                    // desenha ANTES do emblema (ordem do settings: ring → icon).
                     var mid = Mid(rect);
                     int rw = rect.Width;
                     int rh = (int)MathF.Round(rw * 133f / 142f);
-                    sb.Draw(_texAttackRing, new Rectangle((int)(mid.X - rw / 2f), (int)(mid.Y - rh / 2f), rw, rh), Color.White * a);
+                    Color ringCol = (modernOverlay && gs.IsPkModeEnabled) ? new Color(255, 190, 185) : Color.White;
+                    sb.Draw(_texAttackRing, new Rectangle((int)(mid.X - rw / 2f), (int)(mid.Y - rh / 2f), rw, rh), ringCol * a);
                 }
-                // Emblema btn_AttackChange (84x94 no aro 142x133, o mesmo do settings):
-                // o mi_attack do DH é escuro e some sobre o interior assado do Attack.png.
-                if (Tex(_texAttackIcon))
+
+                bool drewMainSkill = false;
+                if (modernOverlay)
                 {
-                    var mid2 = Mid(rect);
-                    // Espada reduzida 15% (estava grande demais): fator 0.85 sobre a
-                    // proporção original 84x94 do emblema.
-                    const float IconScale = 0.85f;
-                    int iw = (int)MathF.Round(rect.Width * 84f / 142f * IconScale);
-                    int ih = (int)MathF.Round(rect.Height * 94f / 133f * IconScale);
-                    sb.Draw(_texAttackIcon, new Rectangle((int)(mid2.X - iw / 2f), (int)(mid2.Y - ih / 2f), iw, ih), Color.White * a);
+                    var mainSkill = ResolveModernMainSkill(gs, skills);
+                    if (mainSkill != null)
+                    {
+                        var iconRect = ScaledRect(rect, 0.72f);
+                        drewMainSkill = DrawSkillIcon(sb, iconRect, mainSkill, a);
+                        if (drewMainSkill && Tex(_texHoleGlow))
+                            sb.Draw(_texHoleGlow, ScaledRect(iconRect, 0.92f), Color.White * a);
+                    }
                 }
-                else if (_texAttack != null && !_texAttack.IsDisposed)
-                    sb.Draw(_texAttack, rect, Color.White * a);
+
+                if (!drewMainSkill)
+                {
+                    if (Tex(_texAttackIcon))
+                    {
+                        var mid2 = Mid(rect);
+                        const float IconScale = 0.85f;
+                        int iw = (int)MathF.Round(rect.Width * 84f / 142f * IconScale);
+                        int ih = (int)MathF.Round(rect.Height * 94f / 133f * IconScale);
+                        sb.Draw(_texAttackIcon, new Rectangle((int)(mid2.X - iw / 2f), (int)(mid2.Y - ih / 2f), iw, ih), Color.White * a);
+                    }
+                    else if (_texAttack != null && !_texAttack.IsDisposed)
+                        sb.Draw(_texAttack, rect, Color.White * a);
+                }
+
+                if (modernOverlay && font != null)
+                {
+                    string mainTag = Localization.Loc.IsChinese ? "主" : "1";
+                    const float tagScale = 0.60f;
+                    var tsz = font.MeasureString(mainTag) * tagScale;
+                    var tpos = new Vector2(rect.X + (rect.Width - tsz.X) / 2f, rect.Bottom - tsz.Y - 4f);
+                    sb.DrawString(font, mainTag, tpos + Vector2.One, Color.Black * 0.9f * a, 0f, Vector2.Zero, tagScale, SpriteEffects.None, 0f);
+                    sb.DrawString(font, mainTag, tpos, new Color(255, 225, 135) * a, 0f, Vector2.Zero, tagScale, SpriteEffects.None, 0f);
+                }
             }
 
             // Restaura o batch padrão da cena (PointClamp) pros próximos controles.

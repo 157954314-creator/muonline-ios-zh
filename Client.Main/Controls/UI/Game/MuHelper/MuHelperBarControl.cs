@@ -116,7 +116,9 @@ namespace Client.Main.Controls.UI.Game.MuHelper
         private void SyncLayout()
         {
             Rectangle loc = _locationBar.DisplayRectangle;
-            int barHeight = loc.Height > 0 ? loc.Height : 28;
+            bool mobile = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+            int baseLocHeight = loc.Height > 0 ? loc.Height : 28;
+            int barHeight = mobile ? Math.Max(36, (int)MathF.Round(baseLocHeight * 1.28f)) : baseLocHeight;
             float scale = barHeight / 28f;
 
             int pad = Math.Max(3, (int)MathF.Round(4f * scale));
@@ -126,12 +128,12 @@ namespace Client.Main.Controls.UI.Game.MuHelper
             int btnW = Math.Max(20, (int)MathF.Round(btnH * (18f / 13f)));
             int width = pad * 2 + btnW * 2 + gap;
 
-            X = (loc.Width > 0 ? loc.Right : 292) + GapFromLocation;
-            Y = loc.Y > 0 ? loc.Y : 10;
+            X = (loc.Width > 0 ? loc.Right : 292) + (mobile ? 4 : GapFromLocation);
+            Y = loc.Y > 0 ? loc.Y - (barHeight - baseLocHeight) / 2 : 10;
             ControlSize = new Point(width, barHeight);
             ViewSize = ControlSize;
 
-            _locationBar.ExtraRightOffset = width + GapFromLocation;
+            _locationBar.ExtraRightOffset = width + (mobile ? 4 : GapFromLocation);
 
             Rectangle rect = DisplayRectangle;
             _settingsBtnRect = new Rectangle(rect.X + pad, rect.Y + pad, btnW, btnH);

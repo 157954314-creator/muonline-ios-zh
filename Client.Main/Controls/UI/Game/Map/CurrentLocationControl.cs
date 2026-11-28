@@ -40,7 +40,7 @@ namespace Client.Main.Controls.UI.Game.Map
             _characterState = characterState;
 
             AutoViewSize = false;
-            Interactive = false;
+            Interactive = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
             BackgroundColor = Color.Transparent;
             BorderColor = Color.Transparent;
             BorderThickness = 0;
@@ -76,6 +76,20 @@ namespace Client.Main.Controls.UI.Game.Map
             base.Update(gameTime);
             RefreshLayout();
             RefreshData();
+
+            if (Interactive && Visible && Status == GameControlStatus.Ready)
+            {
+                var mouse = MuGame.Instance.UiMouseState;
+                var prev = MuGame.Instance.PrevUiMouseState;
+                if (IsMouseOver && DisplayRectangle.Contains(mouse.Position) &&
+                    mouse.LeftButton == Microsoft.Xna.Framework.Input.ButtonState.Pressed &&
+                    prev.LeftButton == Microsoft.Xna.Framework.Input.ButtonState.Released)
+                {
+                    SoundController.Instance?.PlayBuffer("Sound/iButtonClick.wav");
+                    (Scene as Client.Main.Scenes.GameScene)?.MoveCommandWindow?.ToggleVisibility();
+                    Scene?.SetMouseInputConsumed();
+                }
+            }
         }
 
         public override void Draw(GameTime gameTime)
@@ -179,7 +193,9 @@ namespace Client.Main.Controls.UI.Game.Map
             float wScale = Math.Max(0.82f, ViewSize.X / (float)BaseWidth);
             int padX = ScaleValue(PadX, wScale);
 
-            string coords = $"X:{_characterState.PositionX}  Y:{_characterState.PositionY}";
+            bool showWarpTag = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS();
+            string warpPrefix = showWarpTag ? (Localization.Loc.IsChinese ? "[传送] " : "[WARP] ") : string.Empty;
+            string coords = $"{warpPrefix}X:{_characterState.PositionX}  Y:{_characterState.PositionY}";
             Vector2 coordsSize = _font!.MeasureString(coords) * _coordsScale;
             float coordsX = rect.Right - padX - coordsSize.X;
             float coordsY = rect.Y + (rect.Height - coordsSize.Y) / 2f;

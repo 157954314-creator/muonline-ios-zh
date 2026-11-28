@@ -35,8 +35,13 @@ namespace Client.Main.Controls.UI.Game.Hud
         private UiThemeId _loadedTheme = (UiThemeId)(-1);
 
         private bool _active;
-        private Vector2 _center;        // Fixed base center in virtual UI coordinates.
+        private bool _isFloatingOrigin;
+        private Vector2 _center;        // Active base center in virtual UI coordinates.
+        private Vector2 _floatingCenter;
         private Vector2 _knob;          // Current knob position in virtual UI coordinates.
+
+        public bool IsActive => _active;
+        public Vector2 CurrentWorldDirection { get; private set; }
 
         public VirtualJoystickControl()
         {
@@ -97,15 +102,30 @@ namespace Client.Main.Controls.UI.Game.Hud
             bool prevDown = prev.LeftButton == ButtonState.Pressed;
             var p = new Vector2(mouse.Position.X, mouse.Position.Y);
 
-            _center = Center;
+            _center = _active && _isFloatingOrigin ? _floatingCenter : Center;
 
-            // Começa a arrastar se o toque iniciou dentro da base.
+            // Floating left-screen joystick: touch inside the resting base OR anywhere in empty
+            // lower-left world space (left 40% of screen, avoiding top HUD and bottom orbs/bar).
             if (!_active && down && !prevDown)
             {
-                float startR = BaseRadius * 1.35f; // área de captura um pouco maior
-                if (Vector2.Distance(p, _center) <= startR)
+                Vector2 restCenter = Center;
+                float startR = BaseRadius * 1.35f;
+                if (Vector2.Distance(p, restCenter) <= startR)
                 {
                     _active = true;
+                    _isFloatingOrigin = false;
+                    _center = restCenter;
+                }
+                else if (p.X >= 10f && p.X <= UiScaler.VirtualSize.X * 0.40f &&
+                         p.Y >= 96f && p.Y <= UiScaler.VirtualSize.Y - 122f &&
+                         (Scene.MouseHoverControl == null ||
+                          Scene.MouseHoverControl == Scene.World ||
+                          Scene.MouseHoverControl == this))
+                {
+                    _active = true;
+                    _isFloatingOrigin = true;
+                    _floatingCenter = p;
+                    _center = p;
                 }
             }
 
@@ -117,7 +137,9 @@ namespace Client.Main.Controls.UI.Game.Hud
                 if (!down)
                 {
                     _active = false;
+                    _isFloatingOrigin = false;
                     _knob = Vector2.Zero;
+                    CurrentWorldDirection = Vector2.Zero;
                     _lastDx = _lastDy = 0;
                     // Stop cleanly at current tile so hero doesn't keep sliding after thumb release.
                     if (hero != null && hero.IsMoving)
@@ -137,9 +159,14 @@ namespace Client.Main.Controls.UI.Game.Hud
                 float norm = clamped / BaseRadius; // 0..1
                 if (norm < DeadZone || hero == null)
                 {
-                    // Zona morta: não move (mantém o manípulo desenhado).
+                    CurrentWorldDirection = Vector2.Zero;
                     return;
                 }
+
+                Vector2 isoDir = new(dir.X + dir.Y, dir.X - dir.Y);
+                if (isoDir.LengthSquared() > 0.0001f)
+                    isoDir.Normalize();
+                CurrentWorldDirection = isoDir;
 
                 DriveMovement(hero, dir);
             }
@@ -217,10 +244,10 @@ namespace Client.Main.Controls.UI.Game.Hud
             var sb = GraphicsManager.Instance?.Sprite;
             if (pixel == null || sb == null) return;
 
-            _center = Center;
+            _center = _active && _isFloatingOrigin ? _floatingCenter : Center;
             Vector2 knobPos = _center + (_active ? _knob : Vector2.Zero);
 
-            float alpha = _active ? 1.0f : 0.7f;
+            float alpha = _active ? 1.0f : 0.52f;
 
             // Arte real do Dragon Havoc, se carregada; senão desenho procedural.
             if (_texBase != null && !_texBase.IsDisposed && _texKnob != null && !_texKnob.IsDisposed)

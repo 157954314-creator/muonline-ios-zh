@@ -153,22 +153,23 @@ namespace Client.Main.Controls.UI.Game.MuHelper
 
         public void Update(GameTime gameTime)
         {
-            if (!IsRunning) return;
+            bool pkEscortOnly = !IsRunning && _scene.IsPkModeEnabled;
+            if (!IsRunning && !pkEscortOnly) return;
 
             var hero = _scene.Hero;
             if (hero == null || _scene.World == null)
             {
-                Stop();
+                if (IsRunning) Stop();
                 return;
             }
 
             if (hero.IsDead)
             {
-                Stop("角色已阵亡，游戏助手自动停止。");
+                if (IsRunning) Stop("角色已阵亡，游戏助手自动停止。");
                 return;
             }
 
-            if (_state.MapId != OriginMapId)
+            if (IsRunning && _state.MapId != OriginMapId)
             {
                 Stop("已切换地图，游戏助手自动停止。");
                 return;
@@ -179,8 +180,15 @@ namespace Client.Main.Controls.UI.Game.MuHelper
                 return;
             _lastTickTime = now;
 
-            // 1. Auto Potion (HP / MP)
+            // 1. Auto Potion (HP / MP) — runs in both normal AFK and PK manual escort mode!
             TryAutoPotions(now);
+
+            // 2.8. Fairy Elf: Auto Heal skill (self & party)
+            if (ClassFamily == MuHelperClassFamily.FairyElf && TryElfAutoHeal(now, hero))
+                return;
+
+            if (pkEscortOnly)
+                return;
 
             // 2. Auto Repair worn equipment (throttled every 15s)
             if (Config.AutoRepairEnabled && now - _lastRepairCheckTime >= 15.0)
@@ -192,13 +200,17 @@ namespace Client.Main.Controls.UI.Game.MuHelper
             // 2.5. Dark Lord: sync Dark Raven attack mode if changed
             ApplyDarkRavenModeIfNeeded();
 
-            // 2.8. Fairy Elf: Auto Heal skill (self & party)
-            if (ClassFamily == MuHelperClassFamily.FairyElf && TryElfAutoHeal(now, hero))
-                return;
-
             // 3. Auto Self-Buffs & Party Buffs (timed rotation)
             if (Config.AutoBuffEnabled && TryAutoBuffs(now))
                 return;
+
+            // In PK mode or while manually steering the joystick, yield movement & targeting
+            // to the player while keeping Auto-Potion & Self-Buffs active!
+            if (_scene.IsPkModeEnabled || _scene.IsJoystickActive)
+            {
+                StatusSummary = _scene.IsPkModeEnabled ? "PK 护航补给" : "手动走位中";
+                return;
+            }
 
             // 4. Max-seconds-away leash back to origin
             if (Config.ReturnToOrigin && Config.MaxSecondsAway > 0)
@@ -255,7 +267,8 @@ namespace Client.Main.Controls.UI.Game.MuHelper
 
         private void TryAutoPotions(double now)
         {
-            if (Config.AutoHealEnabled && _state.MaximumHealth > 0 && now - _lastHealTime >= 1.0)
+            double healInterval = _scene.IsPkModeEnabled ? 0.45 : 1.0;
+            if (Config.AutoHealEnabled && _state.MaximumHealth > 0 && now - _lastHealTime >= healInterval)
             {
                 float hpPct = (_state.CurrentHealth * 100f) / _state.MaximumHealth;
                 if (hpPct <= Config.AutoHealPercent)

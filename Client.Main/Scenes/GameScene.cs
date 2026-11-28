@@ -131,7 +131,132 @@ namespace Client.Main.Scenes
         // ───────────────────────── Properties ─────────────────────────
         public HeroObject Hero => _hero;
         public ChatLogWindow ChatLog => _chatLog;
+        public bool IsPkModeEnabled { get; private set; }
+        public ushort LockedPvpTargetId { get; private set; }
+        public bool IsJoystickActive => _classicJoystick?.IsActive == true;
+        public Vector2 JoystickWorldDirection => _classicJoystick?.CurrentWorldDirection ?? Vector2.Zero;
         public void PickupNearestItem() => _hotkeys?.TriggerPickupNearestItem();
+
+        public bool CanAttackPlayer(PlayerObject targetPlayer)
+        {
+            if (targetPlayer == null || targetPlayer == _hero || targetPlayer.IsDead || targetPlayer.World != World)
+                return false;
+            if (MuGame.Network?.GetPartyManager()?.IsMember(targetPlayer.NetworkId) == true)
+                return false;
+            if (_duelController?.IsDuelAttackTarget(targetPlayer) == true)
+                return true;
+            var kb = MuGame.Instance.Keyboard;
+            return IsPkModeEnabled || kb.IsKeyDown(Keys.LeftControl) || kb.IsKeyDown(Keys.RightControl);
+        }
+
+        public void TogglePkMode()
+        {
+            IsPkModeEnabled = !IsPkModeEnabled;
+            if (!IsPkModeEnabled)
+                LockedPvpTargetId = 0;
+
+            string msg = IsPkModeEnabled
+                ? (Localization.Loc.IsChinese ? "已开启 [PK 强攻] 模式（自动补血护航已激活）" : "PK Mode ON (Auto-Potion Escort active)")
+                : (Localization.Loc.IsChinese ? "已切回 [和平] 模式" : "Peace Mode ON");
+            _chatLog?.AddMessage("System", msg, MessageType.System);
+        }
+
+        public PlayerObject GetLockedOrNearestPvpTarget(float maxTiles = 13f)
+        {
+            if (World?.Players == null || _hero == null)
+                return null;
+
+            var players = World.Players;
+            float maxLockSq = 16f * 16f;
+            if (LockedPvpTargetId != 0)
+            {
+                for (int i = 0; i < players.Count; i++)
+                {
+                    var p = players[i];
+                    if (p != null && p != _hero && !p.IsDead && p.World == World &&
+                        p.NetworkId == LockedPvpTargetId &&
+                        MuGame.Network?.GetPartyManager()?.IsMember(p.NetworkId) != true &&
+                        Vector2.DistanceSquared(_hero.Location, p.Location) <= maxLockSq)
+                    {
+                        return p;
+                    }
+                }
+                LockedPvpTargetId = 0;
+            }
+
+            PlayerObject nearest = null;
+            float bestSq = maxTiles * maxTiles;
+            for (int i = 0; i < players.Count; i++)
+            {
+                var p = players[i];
+                if (p == null || p == _hero || p.IsDead || p.World != World)
+                    continue;
+                if (MuGame.Network?.GetPartyManager()?.IsMember(p.NetworkId) == true)
+                    continue;
+                float d = Vector2.DistanceSquared(_hero.Location, p.Location);
+                if (d < bestSq)
+                {
+                    bestSq = d;
+                    nearest = p;
+                }
+            }
+            return nearest;
+        }
+
+        public PlayerObject CyclePvpTarget(float maxTiles = 15f)
+        {
+            if (World?.Players == null || _hero == null)
+                return null;
+
+            var candidates = new List<PlayerObject>();
+            float maxSq = maxTiles * maxTiles;
+            var players = World.Players;
+            for (int i = 0; i < players.Count; i++)
+            {
+                var p = players[i];
+                if (p == null || p == _hero || p.IsDead || p.World != World)
+                    continue;
+                if (MuGame.Network?.GetPartyManager()?.IsMember(p.NetworkId) == true)
+                    continue;
+                if (Vector2.DistanceSquared(_hero.Location, p.Location) <= maxSq)
+                    candidates.Add(p);
+            }
+
+            if (candidates.Count == 0)
+            {
+                LockedPvpTargetId = 0;
+                _chatLog?.AddMessage("System", Localization.Loc.IsChinese ? "附近没有可锁定的玩家。" : "No players nearby to lock.", MessageType.System);
+                return null;
+            }
+
+            candidates.Sort((a, b) =>
+                Vector2.DistanceSquared(_hero.Location, a.Location)
+                    .CompareTo(Vector2.DistanceSquared(_hero.Location, b.Location)));
+
+            int nextIdx = 0;
+            if (LockedPvpTargetId != 0)
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    if (candidates[i].NetworkId == LockedPvpTargetId)
+                    {
+                        nextIdx = (i + 1) % candidates.Count;
+                        break;
+                    }
+                }
+            }
+
+            PlayerObject chosen = candidates[nextIdx];
+            LockedPvpTargetId = chosen.NetworkId;
+            if (!IsPkModeEnabled && _duelController?.IsDuelAttackTarget(chosen) != true)
+                IsPkModeEnabled = true;
+
+            int distTiles = (int)MathF.Round(Vector2.Distance(_hero.Location, chosen.Location));
+            _chatLog?.AddMessage("System",
+                Localization.Loc.IsChinese ? $"已锁定对手：{chosen.Name}（{distTiles} 格）" : $"Locked target: {chosen.Name} ({distTiles}m)",
+                MessageType.System);
+            return chosen;
+        }
         public InventoryControl InventoryControl => _inventoryControl;
         public TradeControl TradeControl => TradeControl.Instance;
         public PauseMenuControl PauseMenu => _pauseMenu;
@@ -953,11 +1078,10 @@ namespace Client.Main.Scenes
                 }
             }
 
-            // Handle attack clicks on duel opponent players (treat as monster during duel)
+            // Handle attack clicks on players (duel opponent, PK mode, or Ctrl force-attack)
             if (!IsMouseInputConsumedThisFrame &&
                 MouseHoverObject is PlayerObject targetPlayer &&
-                targetPlayer != _hero &&
-                (_duelController?.IsDuelAttackTarget(targetPlayer) == true) &&
+                CanAttackPlayer(targetPlayer) &&
                 MuGame.Instance.Mouse.LeftButton == ButtonState.Pressed &&
                 MuGame.Instance.PrevMouseState.LeftButton == ButtonState.Released) // Fresh press
             {
@@ -1143,6 +1267,7 @@ namespace Client.Main.Scenes
                        transform: UiScaler.SpriteTransform))
             {
                 var sprite = GraphicsManager.Instance.Sprite;
+                DrawPvpLockOverlay(sprite);
                 _inventoryControl?._pickedItemRenderer?.Draw(sprite, gameTime);
                 VaultControl.Instance?.DrawPickedPreview(sprite, gameTime);
                 ChaosMixControl.Instance?.DrawPickedPreview(sprite, gameTime);
@@ -1155,6 +1280,75 @@ namespace Client.Main.Scenes
         {
             _fpsLabel?.Draw(gameTime);
             _pingLabel?.Draw(gameTime);
+        }
+
+        private void DrawPvpLockOverlay(SpriteBatch sprite)
+        {
+            if (sprite == null || World == null || _hero == null)
+                return;
+
+            PlayerObject locked = null;
+            if (LockedPvpTargetId != 0 && World.Players != null)
+            {
+                var players = World.Players;
+                for (int i = 0; i < players.Count; i++)
+                {
+                    var p = players[i];
+                    if (p != null && !p.IsDead && p.World == World && p.NetworkId == LockedPvpTargetId)
+                    {
+                        locked = p;
+                        break;
+                    }
+                }
+                if (locked == null)
+                    LockedPvpTargetId = 0;
+            }
+
+            if (locked == null)
+                return;
+
+            var pixel = GraphicsManager.Instance.Pixel;
+            var font = GraphicsManager.Instance.SmallFont ?? GraphicsManager.Instance.Font;
+            if (pixel == null || font == null)
+                return;
+
+            // 1. World-projected crimson target marker around locked opponent's feet
+            var cam = Graphics.Camera.Instance;
+            if (cam != null)
+            {
+                Vector3 footWorld = locked.WorldPosition.Translation + new Vector3(0f, 0f, 12f);
+                Vector3 projected = GraphicsDevice.Viewport.Project(
+                    footWorld, cam.Projection, cam.View, Matrix.Identity);
+                if (projected.Z is >= 0f and <= 1f)
+                {
+                    Point vp = UiScaler.ToVirtual(new Point((int)projected.X, (int)projected.Y));
+                    var ringRect = new Rectangle(vp.X - 28, vp.Y - 12, 56, 24);
+                    Color lockCol = new Color(255, 64, 64);
+                    sprite.Draw(pixel, new Rectangle(ringRect.X, ringRect.Y, ringRect.Width, 2), lockCol * 0.9f);
+                    sprite.Draw(pixel, new Rectangle(ringRect.X, ringRect.Bottom - 2, ringRect.Width, 2), lockCol * 0.9f);
+                    sprite.Draw(pixel, new Rectangle(ringRect.X, ringRect.Y, 2, ringRect.Height), lockCol * 0.9f);
+                    sprite.Draw(pixel, new Rectangle(ringRect.Right - 2, ringRect.Y, 2, ringRect.Height), lockCol * 0.9f);
+                }
+            }
+
+            // 2. Top-center PK Lock Pill
+            int dist = (int)MathF.Round(Vector2.Distance(_hero.Location, locked.Location));
+            string label = Localization.Loc.IsChinese
+                ? $"PK 锁定：{locked.Name}  ({dist}格)"
+                : $"LOCKED: {locked.Name} ({dist}m)";
+            const float scale = 0.72f;
+            Vector2 sz = font.MeasureString(label) * scale;
+            int pw = (int)sz.X + 28;
+            int ph = 28;
+            int px = (UiScaler.VirtualSize.X - pw) / 2;
+            int py = 10;
+            var pill = new Rectangle(px, py, pw, ph);
+            sprite.Draw(pixel, pill, new Color(36, 8, 12) * 0.86f);
+            sprite.Draw(pixel, new Rectangle(pill.X, pill.Y, pill.Width, 2), new Color(235, 65, 65));
+            sprite.Draw(pixel, new Rectangle(pill.X, pill.Bottom - 1, pill.Width, 1), new Color(160, 40, 40));
+            Vector2 tp = new(px + (pw - sz.X) / 2f, py + (ph - sz.Y) / 2f);
+            sprite.DrawString(font, label, tp + Vector2.One, Color.Black * 0.85f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            sprite.DrawString(font, label, tp, new Color(255, 215, 195), 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
 
