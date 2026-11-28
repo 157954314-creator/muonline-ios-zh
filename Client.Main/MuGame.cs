@@ -579,6 +579,28 @@ namespace Client.Main
             UiThemeManager.Initialize(initialTheme, bootLogger);
             AppSettings.Ui.Theme = UiThemeManager.CurrentId.ToString();
 
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+            {
+                if (string.IsNullOrWhiteSpace(AppSettings.ConnectServerHost) ||
+                    AppSettings.ConnectServerHost == "127.0.0.1")
+                {
+                    AppSettings.ConnectServerHost = "192.168.50.116";
+                    if (AppSettings.ConnectServerPort <= 0)
+                        AppSettings.ConnectServerPort = 44405;
+                }
+
+                AppSettings.QuickLogin ??= new QuickLoginSettings();
+                if (string.IsNullOrWhiteSpace(AppSettings.QuickLogin.Username))
+                {
+                    AppSettings.QuickLogin.Enabled = true;
+                    AppSettings.QuickLogin.Username = "test1";
+                    AppSettings.QuickLogin.Password = "test1";
+                    AppSettings.QuickLogin.ServerIndex = 0;
+                    AppSettings.QuickLogin.AutoSelectServer = true;
+                    AppSettings.QuickLogin.AutoSubmit = true;
+                }
+            }
+
             // --- Initialize Network Manager ---
             // Needs CharacterState and ScopeManager - create basic instances for now
             // You'll likely manage these more centrally later
@@ -2126,6 +2148,51 @@ namespace Client.Main
             catch (Exception ex)
             {
                 logger?.LogWarning(ex, "Failed to persist connect server settings to disk.");
+            }
+        }
+
+        public static void PersistQuickLoginCredentials(string username, string password)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return;
+
+            if (AppSettings != null)
+            {
+                AppSettings.QuickLogin ??= new QuickLoginSettings();
+                AppSettings.QuickLogin.Enabled = true;
+                AppSettings.QuickLogin.Username = username;
+                AppSettings.QuickLogin.Password = password ?? string.Empty;
+                AppSettings.QuickLogin.AutoSelectServer = true;
+                AppSettings.QuickLogin.AutoSubmit = true;
+            }
+
+            var logger = AppLoggerFactory?.CreateLogger<MuGame>();
+            try
+            {
+                Directory.CreateDirectory(ConfigDirectory ?? AppContext.BaseDirectory);
+                JsonObject root = LoadLocalSettings(logger);
+                if (root["MuOnlineSettings"] is not JsonObject muSettings)
+                {
+                    muSettings = new JsonObject();
+                    root["MuOnlineSettings"] = muSettings;
+                }
+
+                muSettings["QuickLogin"] = new JsonObject
+                {
+                    ["Enabled"] = true,
+                    ["Username"] = username,
+                    ["Password"] = password ?? string.Empty,
+                    ["ServerIndex"] = AppSettings?.QuickLogin?.ServerIndex ?? 0,
+                    ["AutoSelectServer"] = true,
+                    ["AutoSubmit"] = true
+                };
+
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(LocalSettingsPath, root.ToJsonString(options));
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Failed to persist QuickLogin credentials.");
             }
         }
 

@@ -370,6 +370,12 @@ namespace Client.Main.Controls.UI.Login
                 Scene.FocusControl = null; // keep focus cleared so keyboard stays hidden
             }
 
+            if ((OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) &&
+                !string.IsNullOrWhiteSpace(_userInput.Value))
+            {
+                MuGame.PersistQuickLoginCredentials(_userInput.Value, _passwordInput.Value);
+            }
+
             LoginAttempt?.Invoke(this, EventArgs.Empty);
         }
     }

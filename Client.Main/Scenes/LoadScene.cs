@@ -339,7 +339,9 @@ namespace Client.Main.Scenes
         {
             Type nextSceneType;
 
-            if (OperatingSystem.IsAndroid())
+            if (OperatingSystem.IsAndroid() &&
+                (string.IsNullOrWhiteSpace(MuGame.AppSettings?.ConnectServerHost) ||
+                 MuGame.AppSettings.ConnectServerHost == "127.0.0.1"))
                 nextSceneType = typeof(ServerConfigScene);
             else
                 nextSceneType = Constants.ENTRY_SCENE == typeof(LoadScene)
