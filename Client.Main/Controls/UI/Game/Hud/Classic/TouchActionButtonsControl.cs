@@ -396,6 +396,15 @@ namespace Client.Main.Controls.UI.Game.Hud
 
                 if (_texSocketRing == null && Tex(_texSkillFrame))
                     sb.Draw(_texSkillFrame, rect, Color.White * (skill != null ? a : a * 0.9f));
+                else if (!drewIcon && _texSocketRing == null && pixel != null)
+                {
+                    DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 1f, new Color(16, 18, 24) * (0.72f * a));
+                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, new Color(195, 160, 95) * (0.90f * a));
+                }
+                else if (drewIcon && _texHoleGlow == null && pixel != null)
+                {
+                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, new Color(225, 185, 105) * (0.92f * a));
+                }
 
                 if (modernOverlay && font != null)
                 {
@@ -414,11 +423,17 @@ namespace Client.Main.Controls.UI.Game.Hud
                 bool pkOn = gs.IsPkModeEnabled;
                 float a = (_pkPressed ? 0.75f : 1f) * MasterAlpha;
                 var rect = _pkPressed ? Shrink(_pkModeRect, 2) : _pkModeRect;
-                Color ringTint = pkOn ? new Color(255, 95, 95) : new Color(130, 235, 165);
+                Color ringTint = pkOn ? new Color(245, 75, 75) : new Color(95, 215, 140);
                 if (Tex(_texSocketRing))
                     sb.Draw(_texSocketRing, ScaledRect(rect, 88f / 75f), ringTint * a);
                 if (Tex(_texHoleBase))
                     sb.Draw(_texHoleBase, ScaledRect(rect, 0.855f), (pkOn ? new Color(180, 40, 40) : Color.White) * a);
+                else if (pixel != null)
+                {
+                    Color fill = pkOn ? new Color(75, 16, 18) : new Color(14, 42, 26);
+                    DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 1f, fill * (0.84f * a));
+                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, ringTint * (0.95f * a));
+                }
 
                 if (font != null)
                 {
@@ -428,7 +443,7 @@ namespace Client.Main.Controls.UI.Game.Hud
                         : (Localization.Loc.IsChinese ? "和平" : "SAFE");
                     var size = font.MeasureString(text) * textScale;
                     var pos = new Vector2(rect.X + (rect.Width - size.X) / 2f, rect.Y + (rect.Height - size.Y) / 2f);
-                    Color textCol = pkOn ? new Color(255, 115, 105) : new Color(135, 240, 165);
+                    Color textCol = pkOn ? new Color(255, 135, 125) : new Color(145, 245, 175);
                     sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.9f * a, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
                     sb.DrawString(font, text, pos, textCol * a, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
                 }
@@ -439,11 +454,17 @@ namespace Client.Main.Controls.UI.Game.Hud
                 float a = (_lockPressed ? 0.75f : 1f) * MasterAlpha;
                 var rect = _lockPressed ? Shrink(_resetRect, 2) : _resetRect;
                 bool hasLock = modernOverlay && gs.LockedPvpTargetId != 0;
-                Color ringTint = hasLock ? new Color(255, 90, 90) : Color.White;
+                Color ringTint = hasLock ? new Color(255, 85, 85) : new Color(210, 172, 100);
                 if (Tex(_texSocketRing))
                     sb.Draw(_texSocketRing, ScaledRect(rect, 88f / 75f), ringTint * a);
                 if (Tex(_texHoleBase))
                     sb.Draw(_texHoleBase, ScaledRect(rect, 0.855f), (hasLock ? new Color(150, 40, 40) : Color.White) * a);
+                else if (pixel != null)
+                {
+                    Color fill = hasLock ? new Color(75, 16, 18) : new Color(18, 20, 26);
+                    DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 1f, fill * (0.84f * a));
+                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, ringTint * (0.95f * a));
+                }
 
                 if (font != null)
                 {
@@ -455,7 +476,7 @@ namespace Client.Main.Controls.UI.Game.Hud
                     var pos = new Vector2(
                         rect.X + (rect.Width - size.X) / 2f,
                         rect.Y + (rect.Height - size.Y) / 2f);
-                    Color textCol = hasLock ? new Color(255, 130, 120) : new Color(235, 200, 120);
+                    Color textCol = hasLock ? new Color(255, 130, 120) : new Color(240, 205, 125);
                     sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.85f * a,
                         0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
                     sb.DrawString(font, text, pos, textCol * a,
@@ -469,7 +490,12 @@ namespace Client.Main.Controls.UI.Game.Hud
                 float a = (_attackPressed ? 0.72f : 1f) * MasterAlpha;
                 var rect = _attackPressed ? Shrink(_attackRect, 4) : _attackRect;
                 if (pixel != null && !Tex(_texAttackRing))
-                    DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 2f, new Color(22, 20, 18) * (0.80f * a));
+                {
+                    Color mainRing = (modernOverlay && gs.IsPkModeEnabled) ? new Color(245, 85, 80) : new Color(220, 180, 105);
+                    DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 2f, new Color(18, 16, 20) * (0.84f * a));
+                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 3.5f, mainRing * (0.95f * a));
+                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f - 6f, 1.5f, mainRing * (0.45f * a));
+                }
                 if (Tex(_texAttackRing))
                 {
                     var mid = Mid(rect);
@@ -549,6 +575,33 @@ namespace Client.Main.Controls.UI.Game.Hud
             {
                 int half = (int)MathF.Sqrt(MathF.Max(0f, r * r - y * y));
                 sb.Draw(pixel, new Rectangle((int)(c.X - half), (int)(c.Y + y), half * 2, 1), color);
+            }
+        }
+
+        private static void DrawRing(SpriteBatch sb, Texture2D pixel, Vector2 c, float r, float thickness, Color color)
+        {
+            float rIn = MathF.Max(0f, r - thickness);
+            int ir = (int)r;
+            for (int y = -ir; y <= ir; y++)
+            {
+                float outer = r * r - y * y;
+                if (outer <= 0f) continue;
+                int xo = (int)MathF.Sqrt(outer);
+                float inner = rIn * rIn - y * y;
+                if (inner <= 0f)
+                {
+                    sb.Draw(pixel, new Rectangle((int)(c.X - xo), (int)(c.Y + y), xo * 2, 1), color);
+                }
+                else
+                {
+                    int xi = (int)MathF.Sqrt(inner);
+                    int seg = xo - xi;
+                    if (seg > 0)
+                    {
+                        sb.Draw(pixel, new Rectangle((int)(c.X - xo), (int)(c.Y + y), seg, 1), color);
+                        sb.Draw(pixel, new Rectangle((int)(c.X + xi), (int)(c.Y + y), seg, 1), color);
+                    }
+                }
             }
         }
 
