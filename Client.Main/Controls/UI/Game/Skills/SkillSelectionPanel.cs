@@ -217,14 +217,16 @@ namespace Client.Main.Controls.UI.Game.Skills
             for (int i = 0; i < _skills.Count; i++)
                 DrawSlot(sb, At(_slotRects[i]), _skills[i], i == _hovered, alpha);
             if (_skills.Count == 0)
-                OrnateDraw.TextCentered(sb, "No skills learned yet", grid, 14f, OrnateStyle.TextMuted, alpha);
+                OrnateDraw.TextCentered(sb, Localization.Loc.IsChinese ? "暂未学习任何技能" : "No skills learned yet", grid, 14f, OrnateStyle.TextMuted, alpha);
 
             DrawDetail(sb, At(_detailLocal), _hovered >= 0 ? _skills[_hovered] : null, alpha);
             DrawFooter(sb, At(_footerLocal), alpha);
 
             OrnateWidgets.CloseButton(sb, CloseRect, _closeHovered, alpha);
             OrnateDraw.TitlePlaque(sb, Localization.Loc.IsChinese ? "技能列表" : "Skills", frame.Center.X, frame.Y + 2, 38, alpha);
-            string count = _skills.Count == 1 ? "1 skill" : $"{_skills.Count} skills";
+            string count = Localization.Loc.IsChinese
+                ? $"共 {_skills.Count} 个技能"
+                : (_skills.Count == 1 ? "1 skill" : $"{_skills.Count} skills");
             OrnateDraw.TextCentered(sb, count, new Rectangle(frame.X, frame.Y + 30, frame.Width, 20), 12f, OrnateStyle.TextMuted, alpha);
         }
 
@@ -283,9 +285,10 @@ namespace Client.Main.Controls.UI.Game.Skills
             OrnateDraw.Inset(sb, area, alpha, 0.45f);
             UiDrawHelper.DrawBorder(sb, new Rectangle(area.X - 1, area.Y - 1, area.Width + 2, area.Height + 2), OrnateItemUi.Rim * (0.9f * alpha));
 
+            bool zh = Localization.Loc.IsChinese;
             if (skill == null)
             {
-                OrnateDraw.TextCentered(sb, "Hover a skill to see its details", area, 13f, OrnateStyle.TextMuted, alpha);
+                OrnateDraw.TextCentered(sb, zh ? "悬停或点选技能查看详情" : "Hover a skill to see its details", area, 13f, OrnateStyle.TextMuted, alpha);
                 return;
             }
 
@@ -300,19 +303,21 @@ namespace Client.Main.Controls.UI.Game.Skills
             var definition = SkillDatabase.GetSkillDefinition(skill.SkillId);
             string type = SkillDatabase.GetSkillType(skill.SkillId) switch
             {
-                SkillType.Area => "Area skill",
-                SkillType.Self => "Self skill",
-                _ => "Target skill",
+                SkillType.Area => zh ? "范围技能" : "Area skill",
+                SkillType.Self => zh ? "自身技能" : "Self skill",
+                _ => zh ? "目标技能" : "Target skill",
             };
             int textX = icon.Right + 12;
             int textWidth = area.Right - textX - 10;
             string name = Ellipsize(SkillDatabase.GetSkillName(skill.SkillId), 17f, textWidth);
             OrnateDraw.Text(sb, name, new Vector2(textX, icon.Y + 4), 17f, OrnateStyle.Gold, alpha, bold: true);
-            string subtitle = skill.SkillLevel > 0 ? $"{type}  ·  Level {skill.SkillLevel}" : type;
+            string subtitle = skill.SkillLevel > 0
+                ? (zh ? $"{type}  ·  等级 {skill.SkillLevel}" : $"{type}  ·  Level {skill.SkillLevel}")
+                : type;
             OrnateDraw.Text(sb, subtitle, new Vector2(textX, icon.Y + 30), 12f, OrnateStyle.TextMuted, alpha);
             string? key = HotbarKeyOf?.Invoke(skill.SkillId);
             if (!string.IsNullOrEmpty(key))
-                OrnateDraw.Text(sb, $"On hotbar: {key}", new Vector2(textX, icon.Y + 46), 12f, OrnateStyle.GoldDim, alpha);
+                OrnateDraw.Text(sb, zh ? $"已绑定快捷槽：{key}" : $"On hotbar: {key}", new Vector2(textX, icon.Y + 46), 12f, OrnateStyle.GoldDim, alpha);
 
             OrnateDraw.Divider(sb, new Rectangle(area.X + 12, icon.Bottom + 8, area.Width - 24, 12), alpha);
 
@@ -327,20 +332,20 @@ namespace Client.Main.Controls.UI.Game.Skills
 
             if (definition == null)
             {
-                Row("Details", "not available", OrnateStyle.TextMuted);
+                Row(zh ? "详情" : "Details", zh ? "暂无数据" : "not available", OrnateStyle.TextMuted);
                 return;
             }
 
             if (definition.ManaCost > 0)
-                Row("Mana cost", definition.ManaCost.ToString(CultureInfo.InvariantCulture), ManaColor);
+                Row(zh ? "魔法消耗" : "Mana cost", definition.ManaCost.ToString(CultureInfo.InvariantCulture), ManaColor);
             if (definition.AbilityGaugeCost > 0)
-                Row("AG cost", definition.AbilityGaugeCost.ToString(CultureInfo.InvariantCulture), AgColor);
+                Row(zh ? "AG 消耗" : "AG cost", definition.AbilityGaugeCost.ToString(CultureInfo.InvariantCulture), AgColor);
             if (definition.Damage > 0)
-                Row("Base damage", definition.Damage.ToString(CultureInfo.InvariantCulture), OrnateStyle.TextLight);
+                Row(zh ? "基础伤害" : "Base damage", definition.Damage.ToString(CultureInfo.InvariantCulture), OrnateStyle.TextLight);
             if (definition.Distance > 0)
-                Row("Range", definition.Distance.ToString(CultureInfo.InvariantCulture), OrnateStyle.TextLight);
+                Row(zh ? "施法距离" : "Range", definition.Distance.ToString(CultureInfo.InvariantCulture), OrnateStyle.TextLight);
             if (definition.Delay > 0)
-                Row("Cooldown", (definition.Delay / 1000f).ToString("0.##", CultureInfo.InvariantCulture) + " s", OrnateStyle.TextLight);
+                Row(zh ? "冷却时间" : "Cooldown", (definition.Delay / 1000f).ToString("0.##", CultureInfo.InvariantCulture) + (zh ? " 秒" : " s"), OrnateStyle.TextLight);
 
             bool anyRequirement = definition.RequiredLevel > 0 || definition.RequiredStrength > 0 || definition.RequiredDexterity > 0 ||
                                   definition.RequiredEnergy > 0 || definition.RequiredLeadership > 0;
@@ -348,7 +353,7 @@ namespace Client.Main.Controls.UI.Game.Skills
                 return;
 
             y += 10;
-            OrnateWidgets.SectionHeader(sb, new Rectangle(area.X + 10, y, area.Width - 20, 24), "Requirements", alpha);
+            OrnateWidgets.SectionHeader(sb, new Rectangle(area.X + 10, y, area.Width - 20, 24), zh ? "使用需求" : "Requirements", alpha);
             y += 30;
             void Requirement(string label, int required, int have)
             {
@@ -356,18 +361,19 @@ namespace Client.Main.Controls.UI.Game.Skills
                     Row(label, required.ToString(CultureInfo.InvariantCulture), _state != null && have < required ? UnmetColor : OrnateStyle.TextLight);
             }
 
-            Requirement("Level", definition.RequiredLevel, _state?.Level ?? 0);
-            Requirement("Strength", definition.RequiredStrength, _state?.TotalStrength ?? 0);
-            Requirement("Agility", definition.RequiredDexterity, _state?.TotalAgility ?? 0);
-            Requirement("Energy", definition.RequiredEnergy, _state?.TotalEnergy ?? 0);
-            Requirement("Command", definition.RequiredLeadership, _state?.TotalLeadership ?? 0);
+            Requirement(zh ? "等级" : "Level", definition.RequiredLevel, _state?.Level ?? 0);
+            Requirement(zh ? "力量" : "Strength", definition.RequiredStrength, _state?.TotalStrength ?? 0);
+            Requirement(zh ? "敏捷" : "Agility", definition.RequiredDexterity, _state?.TotalAgility ?? 0);
+            Requirement(zh ? "智力" : "Energy", definition.RequiredEnergy, _state?.TotalEnergy ?? 0);
+            Requirement(zh ? "统率" : "Command", definition.RequiredLeadership, _state?.TotalLeadership ?? 0);
         }
 
         private void DrawFooter(SpriteBatch sb, Rectangle area, float alpha)
         {
+            bool zh = Localization.Loc.IsChinese;
             string text = string.IsNullOrEmpty(TargetSlotLabel)
-                ? "Click a skill to choose it   ·   Esc closes"
-                : $"Click a skill to put it on slot {TargetSlotLabel}   ·   Esc closes";
+                ? (zh ? "点击技能设为当前技能   ·   点外部关闭" : "Click a skill to choose it   ·   Esc closes")
+                : (zh ? $"点击技能装配到快捷槽 {TargetSlotLabel}   ·   点外部关闭" : $"Click a skill to put it on slot {TargetSlotLabel}   ·   Esc closes");
             OrnateDraw.TextCentered(sb, text, area, 12f, OrnateStyle.TextMuted, alpha);
         }
 
