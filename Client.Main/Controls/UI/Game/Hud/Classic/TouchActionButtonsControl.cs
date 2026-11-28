@@ -36,6 +36,9 @@ namespace Client.Main.Controls.UI.Game.Hud
 
         // Keep all seven skill slots available and use a separate circular target for reset.
         private const int ResetSize = 56;
+        private const int ModernTacticalSize = 52;
+        private const int ModernMainSize = 104;
+        private const int ModernSkillSize = 62;
         private static readonly Vector2 ResetCenter = new(-320f, 58f);
 
         // ════════════════════════════════════════════════════════════════════════
@@ -83,6 +86,9 @@ namespace Client.Main.Controls.UI.Game.Hud
         private Texture2D _texHoleGlow;
         private Texture2D _texAttackRing;
         private Texture2D _texAttackIcon;
+        private Texture2D _medallionGold;
+        private Texture2D _medallionSafe;
+        private Texture2D _medallionPk;
         private UiThemeId _loadedTheme = (UiThemeId)(-1);
 
         private Rectangle _attackRect;
@@ -177,24 +183,31 @@ namespace Client.Main.Controls.UI.Game.Hud
             float cornerX = UiScaler.VirtualSize.X;
             float cornerY = UiScaler.VirtualSize.Y - lift;
 
-            var ac = new Vector2(cornerX + AttackCenter.X, cornerY - AttackCenter.Y);
-            _attackRect = CenteredRect(ac, AttackSize / 2f);
-
-            // In Modern PK overlay: two dedicated tactical buttons left of Main Skill:
-            // Upper-left: [和平 / PK] mode toggle; Lower-left: [锁人] PvP target lock/cycle.
-            var lockOffset = modernOverlay ? new Vector2(-214f, 50f) : ResetCenter;
-            var resetCenter = new Vector2(cornerX + lockOffset.X, cornerY - lockOffset.Y);
-            _resetRect = CenteredRect(resetCenter, ResetSize / 2f);
-
             if (modernOverlay)
             {
-                var pkCenter = new Vector2(cornerX - 214f, cornerY - 116f);
-                _pkModeRect = CenteredRect(pkCenter, ResetSize / 2f);
+                // Clean, zero-overlap dark-fantasy PK 5-button ergonomics:
+                // 1 big Main Skill + 3 evenly spaced arc slots (2/3/4) + 2 tactical buttons (和平/PK, 锁人)
+                // positioned clear of both the skill arc and the bottom-right MP orb wings.
+                var ac = new Vector2(cornerX - 74f, cornerY - 96f);
+                _attackRect = CenteredRect(ac, ModernMainSize / 2f);
+
+                _skillRects[0] = CenteredRect(new Vector2(cornerX - 56f, cornerY - 198f), ModernSkillSize / 2f);
+                _skillRects[1] = CenteredRect(new Vector2(cornerX - 134f, cornerY - 181f), ModernSkillSize / 2f);
+                _skillRects[2] = CenteredRect(new Vector2(cornerX - 176f, cornerY - 114f), ModernSkillSize / 2f);
+
+                // [锁人] tucked neatly left of Main Skill & below Slot 4 (clear of MP orb)
+                _resetRect = CenteredRect(new Vector2(cornerX - 172f, cornerY - 34f), ModernTacticalSize / 2f);
+                // [和平 / PK] cleanly outside-left of Slot 4 & above MP orb wing
+                _pkModeRect = CenteredRect(new Vector2(cornerX - 244f, cornerY - 78f), ModernTacticalSize / 2f);
+                return;
             }
-            else
-            {
-                _pkModeRect = Rectangle.Empty;
-            }
+
+            var classicAc = new Vector2(cornerX + AttackCenter.X, cornerY - AttackCenter.Y);
+            _attackRect = CenteredRect(classicAc, AttackSize / 2f);
+
+            var resetCenter = new Vector2(cornerX + ResetCenter.X, cornerY - ResetCenter.Y);
+            _resetRect = CenteredRect(resetCenter, ResetSize / 2f);
+            _pkModeRect = Rectangle.Empty;
 
             BuildFan();
             for (int i = 0; i < SkillArc.Length; i++)
@@ -364,6 +377,9 @@ namespace Client.Main.Controls.UI.Game.Hud
                 return;
             }
 
+            if (modernOverlay)
+                EnsureOrnateMedallions();
+
             // Escopo LinearClamp próprio: o batch da cena usa PointClamp e o reescalonamento
             // dos sprites do soquete/aro sai serrilhado ("falhado" — feedback do usuário);
             // bilinear = o acabamento liso do mobile. Mesmo padrão do SkillPanelControl.
@@ -375,10 +391,29 @@ namespace Client.Main.Controls.UI.Game.Hud
             {
                 int hotbarIndex = modernOverlay ? _modernArcHotbarIndices[i] : i;
                 var skill = (hotbarIndex < skills.Count) ? skills[hotbarIndex] : null;
-                float a = ((_pressedSkill == i) ? 0.7f : 1f) * MasterAlpha;
+                float a = ((_pressedSkill == i) ? 0.72f : 1f) * MasterAlpha;
                 var rect = (_pressedSkill == i) ? Shrink(_skillRects[i], 3) : _skillRects[i];
                 const float InnerScale = 0.855f;
                 var inner = ScaledRect(rect, InnerScale);
+
+                if (modernOverlay && Tex(_medallionGold))
+                {
+                    sb.Draw(_medallionGold, ScaledRect(rect, 1.06f), Color.White * a);
+                    bool drewIconModern = skill != null && DrawSkillIcon(sb, ScaledRect(rect, 0.78f), skill, a);
+                    if (font != null)
+                    {
+                        string slotNum = ((hotbarIndex + 1) % 10).ToString();
+                        float badgeScale = drewIconModern ? 0.50f : 0.64f;
+                        var bsz = font.MeasureString(slotNum) * badgeScale;
+                        var bpos = drewIconModern
+                            ? new Vector2(rect.X + (rect.Width - bsz.X) / 2f, rect.Bottom - bsz.Y - 4f)
+                            : new Vector2(rect.X + (rect.Width - bsz.X) / 2f, rect.Y + (rect.Height - bsz.Y) / 2f);
+                        Color numCol = drewIconModern ? new Color(255, 228, 145) : new Color(215, 182, 118, 210);
+                        sb.DrawString(font, slotNum, bpos + Vector2.One, Color.Black * 0.9f * a, 0f, Vector2.Zero, badgeScale, SpriteEffects.None, 0f);
+                        sb.DrawString(font, slotNum, bpos, numCol * a, 0f, Vector2.Zero, badgeScale, SpriteEffects.None, 0f);
+                    }
+                    continue;
+                }
 
                 bool drewIcon = skill != null && DrawSkillIcon(sb, rect, skill, a);
                 if (drewIcon)
@@ -394,19 +429,7 @@ namespace Client.Main.Controls.UI.Game.Hud
                         sb.Draw(_texHoleBase, inner, Color.White * a);
                 }
 
-                if (modernOverlay && pixel != null)
-                {
-                    if (!drewIcon)
-                    {
-                        DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 1f, new Color(16, 18, 24) * (0.76f * a));
-                        DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, new Color(195, 160, 95) * (0.90f * a));
-                    }
-                    else
-                    {
-                        DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, new Color(225, 185, 105) * (0.94f * a));
-                    }
-                }
-                else if (_texSocketRing == null && Tex(_texSkillFrame))
+                if (_texSocketRing == null && Tex(_texSkillFrame))
                     sb.Draw(_texSkillFrame, rect, Color.White * (skill != null ? a : a * 0.9f));
                 else if (!drewIcon && _texSocketRing == null && pixel != null)
                 {
@@ -417,16 +440,6 @@ namespace Client.Main.Controls.UI.Game.Hud
                 {
                     DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, new Color(225, 185, 105) * (0.92f * a));
                 }
-
-                if (modernOverlay && font != null)
-                {
-                    string slotNum = ((hotbarIndex + 1) % 10).ToString();
-                    const float badgeScale = 0.56f;
-                    var bsz = font.MeasureString(slotNum) * badgeScale;
-                    var bpos = new Vector2(rect.Right - bsz.X - 4f, rect.Bottom - bsz.Y - 2f);
-                    sb.DrawString(font, slotNum, bpos + Vector2.One, Color.Black * 0.9f * a, 0f, Vector2.Zero, badgeScale, SpriteEffects.None, 0f);
-                    sb.DrawString(font, slotNum, bpos, new Color(255, 220, 130) * a, 0f, Vector2.Zero, badgeScale, SpriteEffects.None, 0f);
-                }
             }
 
             // Upper-left tactical button in Modern overlay: [和平 / PK] Mode Toggle
@@ -435,13 +448,14 @@ namespace Client.Main.Controls.UI.Game.Hud
                 bool pkOn = gs.IsPkModeEnabled;
                 float a = (_pkPressed ? 0.75f : 1f) * MasterAlpha;
                 var rect = _pkPressed ? Shrink(_pkModeRect, 2) : _pkModeRect;
-                Color ringTint = pkOn ? new Color(245, 75, 75) : new Color(95, 215, 140);
-                if (Tex(_texSocketRing))
-                    sb.Draw(_texSocketRing, ScaledRect(rect, 88f / 75f), ringTint * a);
-                if (Tex(_texHoleBase))
-                    sb.Draw(_texHoleBase, ScaledRect(rect, 0.855f), (pkOn ? new Color(180, 40, 40) : Color.White) * a);
+                var medTex = pkOn ? _medallionPk : _medallionSafe;
+                if (Tex(medTex))
+                {
+                    sb.Draw(medTex, ScaledRect(rect, 1.08f), Color.White * a);
+                }
                 else if (pixel != null)
                 {
+                    Color ringTint = pkOn ? new Color(245, 75, 75) : new Color(95, 215, 140);
                     Color fill = pkOn ? new Color(75, 16, 18) : new Color(14, 42, 26);
                     DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 1f, fill * (0.84f * a));
                     DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, ringTint * (0.95f * a));
@@ -449,14 +463,14 @@ namespace Client.Main.Controls.UI.Game.Hud
 
                 if (font != null)
                 {
-                    const float textScale = 0.62f;
+                    const float textScale = 0.58f;
                     string text = pkOn
                         ? "PK"
                         : (Localization.Loc.IsChinese ? "和平" : "SAFE");
                     var size = font.MeasureString(text) * textScale;
                     var pos = new Vector2(rect.X + (rect.Width - size.X) / 2f, rect.Y + (rect.Height - size.Y) / 2f);
-                    Color textCol = pkOn ? new Color(255, 135, 125) : new Color(145, 245, 175);
-                    sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.9f * a, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
+                    Color textCol = pkOn ? new Color(255, 175, 160) : new Color(165, 250, 195);
+                    sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.92f * a, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
                     sb.DrawString(font, text, pos, textCol * a, 0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
                 }
             }
@@ -466,21 +480,28 @@ namespace Client.Main.Controls.UI.Game.Hud
                 float a = (_lockPressed ? 0.75f : 1f) * MasterAlpha;
                 var rect = _lockPressed ? Shrink(_resetRect, 2) : _resetRect;
                 bool hasLock = modernOverlay && gs.LockedPvpTargetId != 0;
-                Color ringTint = hasLock ? new Color(255, 85, 85) : new Color(210, 172, 100);
-                if (Tex(_texSocketRing))
-                    sb.Draw(_texSocketRing, ScaledRect(rect, 88f / 75f), ringTint * a);
-                if (Tex(_texHoleBase))
-                    sb.Draw(_texHoleBase, ScaledRect(rect, 0.855f), (hasLock ? new Color(150, 40, 40) : Color.White) * a);
-                else if (pixel != null)
+                if (modernOverlay && Tex(hasLock ? _medallionPk : _medallionGold))
                 {
-                    Color fill = hasLock ? new Color(75, 16, 18) : new Color(18, 20, 26);
-                    DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 1f, fill * (0.84f * a));
-                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, ringTint * (0.95f * a));
+                    sb.Draw(hasLock ? _medallionPk : _medallionGold, ScaledRect(rect, 1.08f), Color.White * a);
+                }
+                else
+                {
+                    Color ringTint = hasLock ? new Color(255, 85, 85) : new Color(210, 172, 100);
+                    if (Tex(_texSocketRing))
+                        sb.Draw(_texSocketRing, ScaledRect(rect, 88f / 75f), ringTint * a);
+                    if (Tex(_texHoleBase))
+                        sb.Draw(_texHoleBase, ScaledRect(rect, 0.855f), (hasLock ? new Color(150, 40, 40) : Color.White) * a);
+                    else if (pixel != null)
+                    {
+                        Color fill = hasLock ? new Color(75, 16, 18) : new Color(18, 20, 26);
+                        DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 1f, fill * (0.84f * a));
+                        DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 2.5f, ringTint * (0.95f * a));
+                    }
                 }
 
                 if (font != null)
                 {
-                    float textScale = modernOverlay ? 0.60f : 0.56f;
+                    float textScale = modernOverlay ? 0.56f : 0.56f;
                     string text = modernOverlay
                         ? (Localization.Loc.IsChinese ? "锁人" : "LOCK")
                         : "R";
@@ -488,8 +509,8 @@ namespace Client.Main.Controls.UI.Game.Hud
                     var pos = new Vector2(
                         rect.X + (rect.Width - size.X) / 2f,
                         rect.Y + (rect.Height - size.Y) / 2f);
-                    Color textCol = hasLock ? new Color(255, 130, 120) : new Color(240, 205, 125);
-                    sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.85f * a,
+                    Color textCol = hasLock ? new Color(255, 165, 150) : new Color(245, 214, 138);
+                    sb.DrawString(font, text, pos + Vector2.One, Color.Black * 0.9f * a,
                         0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
                     sb.DrawString(font, text, pos, textCol * a,
                         0f, Vector2.Zero, textScale, SpriteEffects.None, 0f);
@@ -501,20 +522,27 @@ namespace Client.Main.Controls.UI.Game.Hud
             {
                 float a = (_attackPressed ? 0.72f : 1f) * MasterAlpha;
                 var rect = _attackPressed ? Shrink(_attackRect, 4) : _attackRect;
-                if (pixel != null && !Tex(_texAttackRing))
+                if (modernOverlay && Tex(gs.IsPkModeEnabled ? _medallionPk : _medallionGold))
                 {
-                    Color mainRing = (modernOverlay && gs.IsPkModeEnabled) ? new Color(245, 85, 80) : new Color(220, 180, 105);
-                    DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 2f, new Color(18, 16, 20) * (0.84f * a));
-                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 3.5f, mainRing * (0.95f * a));
-                    DrawRing(sb, pixel, Mid(rect), rect.Width / 2f - 6f, 1.5f, mainRing * (0.45f * a));
+                    sb.Draw(gs.IsPkModeEnabled ? _medallionPk : _medallionGold, ScaledRect(rect, 1.06f), Color.White * a);
                 }
-                if (Tex(_texAttackRing))
+                else
                 {
-                    var mid = Mid(rect);
-                    int rw = rect.Width;
-                    int rh = (int)MathF.Round(rw * 133f / 142f);
-                    Color ringCol = (modernOverlay && gs.IsPkModeEnabled) ? new Color(255, 190, 185) : Color.White;
-                    sb.Draw(_texAttackRing, new Rectangle((int)(mid.X - rw / 2f), (int)(mid.Y - rh / 2f), rw, rh), ringCol * a);
+                    if (pixel != null && !Tex(_texAttackRing))
+                    {
+                        Color mainRing = (modernOverlay && gs.IsPkModeEnabled) ? new Color(245, 85, 80) : new Color(220, 180, 105);
+                        DrawDisc(sb, pixel, Mid(rect), rect.Width / 2f - 2f, new Color(18, 16, 20) * (0.84f * a));
+                        DrawRing(sb, pixel, Mid(rect), rect.Width / 2f, 3.5f, mainRing * (0.95f * a));
+                        DrawRing(sb, pixel, Mid(rect), rect.Width / 2f - 6f, 1.5f, mainRing * (0.45f * a));
+                    }
+                    if (Tex(_texAttackRing))
+                    {
+                        var mid = Mid(rect);
+                        int rw = rect.Width;
+                        int rh = (int)MathF.Round(rw * 133f / 142f);
+                        Color ringCol = (modernOverlay && gs.IsPkModeEnabled) ? new Color(255, 190, 185) : Color.White;
+                        sb.Draw(_texAttackRing, new Rectangle((int)(mid.X - rw / 2f), (int)(mid.Y - rh / 2f), rw, rh), ringCol * a);
+                    }
                 }
 
                 bool drewMainSkill = false;
@@ -523,14 +551,14 @@ namespace Client.Main.Controls.UI.Game.Hud
                     var mainSkill = ResolveModernMainSkill(gs, skills);
                     if (mainSkill != null)
                     {
-                        var iconRect = ScaledRect(rect, 0.72f);
+                        var iconRect = ScaledRect(rect, 0.74f);
                         drewMainSkill = DrawSkillIcon(sb, iconRect, mainSkill, a);
                         if (drewMainSkill && Tex(_texHoleGlow))
                             sb.Draw(_texHoleGlow, ScaledRect(iconRect, 0.92f), Color.White * a);
                     }
                 }
 
-                if (!drewMainSkill)
+                if (!drewMainSkill && !modernOverlay)
                 {
                     if (Tex(_texAttackIcon))
                     {
@@ -547,11 +575,14 @@ namespace Client.Main.Controls.UI.Game.Hud
                 if (modernOverlay && font != null)
                 {
                     string mainTag = Localization.Loc.IsChinese ? "主" : "1";
-                    const float tagScale = 0.60f;
+                    float tagScale = drewMainSkill ? 0.56f : 0.82f;
                     var tsz = font.MeasureString(mainTag) * tagScale;
-                    var tpos = new Vector2(rect.X + (rect.Width - tsz.X) / 2f, rect.Bottom - tsz.Y - 4f);
-                    sb.DrawString(font, mainTag, tpos + Vector2.One, Color.Black * 0.9f * a, 0f, Vector2.Zero, tagScale, SpriteEffects.None, 0f);
-                    sb.DrawString(font, mainTag, tpos, new Color(255, 225, 135) * a, 0f, Vector2.Zero, tagScale, SpriteEffects.None, 0f);
+                    var tpos = drewMainSkill
+                        ? new Vector2(rect.X + (rect.Width - tsz.X) / 2f, rect.Bottom - tsz.Y - 6f)
+                        : new Vector2(rect.X + (rect.Width - tsz.X) / 2f, rect.Y + (rect.Height - tsz.Y) / 2f);
+                    Color tagCol = gs.IsPkModeEnabled ? new Color(255, 195, 170) : new Color(248, 218, 140);
+                    sb.DrawString(font, mainTag, tpos + Vector2.One, Color.Black * 0.92f * a, 0f, Vector2.Zero, tagScale, SpriteEffects.None, 0f);
+                    sb.DrawString(font, mainTag, tpos, tagCol * a, 0f, Vector2.Zero, tagScale, SpriteEffects.None, 0f);
                 }
             }
 
@@ -643,5 +674,162 @@ namespace Client.Main.Controls.UI.Game.Hud
             => new(r.X + by, r.Y + by, r.Width - by * 2, r.Height - by * 2);
         private static Rectangle Expand(Rectangle r, int by)
             => new(r.X - by, r.Y - by, r.Width + by * 2, r.Height + by * 2);
+
+        private void EnsureOrnateMedallions()
+        {
+            var gd = GraphicsManager.Instance?.GraphicsDevice;
+            if (gd == null || gd.IsDisposed)
+                return;
+
+            if (!Tex(_medallionGold))
+            {
+                _medallionGold = CreateOrnateMedallionTexture(
+                    gd,
+                    rimLight: new Vector3(246, 206, 126),
+                    rimDark: new Vector3(112, 76, 34),
+                    coreCenter: new Vector3(14, 15, 22),
+                    coreEdge: new Vector3(34, 28, 20),
+                    gemColor: new Vector3(220, 48, 42));
+            }
+            if (!Tex(_medallionSafe))
+            {
+                _medallionSafe = CreateOrnateMedallionTexture(
+                    gd,
+                    rimLight: new Vector3(120, 238, 175),
+                    rimDark: new Vector3(34, 110, 68),
+                    coreCenter: new Vector3(10, 26, 20),
+                    coreEdge: new Vector3(20, 62, 42),
+                    gemColor: new Vector3(135, 255, 190));
+            }
+            if (!Tex(_medallionPk))
+            {
+                _medallionPk = CreateOrnateMedallionTexture(
+                    gd,
+                    rimLight: new Vector3(255, 118, 92),
+                    rimDark: new Vector3(128, 26, 22),
+                    coreCenter: new Vector3(32, 10, 12),
+                    coreEdge: new Vector3(88, 20, 22),
+                    gemColor: new Vector3(255, 76, 56));
+            }
+        }
+
+        private static Texture2D CreateOrnateMedallionTexture(
+            GraphicsDevice gd,
+            Vector3 rimLight,
+            Vector3 rimDark,
+            Vector3 coreCenter,
+            Vector3 coreEdge,
+            Vector3 gemColor)
+        {
+            const int size = 128;
+            var data = new Color[size * size];
+            float half = (size - 1) * 0.5f;
+            float invHalf = 1f / half;
+
+            for (int y = 0; y < size; y++)
+            {
+                float ny = (y - half) * invHalf;
+                for (int x = 0; x < size; x++)
+                {
+                    float nx = (x - half) * invHalf;
+                    float dist = MathF.Sqrt(nx * nx + ny * ny);
+                    if (dist >= 1.0f)
+                    {
+                        data[y * size + x] = Color.Transparent;
+                        continue;
+                    }
+
+                    // Directional light from top-left (-0.65, -0.76) for 3D metallic bevel
+                    float light = Math.Clamp((-nx * 0.65f - ny * 0.76f) * 0.5f + 0.5f, 0f, 1f);
+                    Vector3 rgb;
+                    float alpha;
+
+                    if (dist > 0.90f)
+                    {
+                        // Soft outer drop shadow
+                        float t = 1f - (dist - 0.90f) / 0.10f;
+                        rgb = Vector3.Zero;
+                        alpha = t * t * 0.55f;
+                    }
+                    else if (dist > 0.77f)
+                    {
+                        // Outer metallic bevel ring with subtle radial crest
+                        float ringT = (dist - 0.77f) / 0.13f;
+                        float crest = MathF.Sin(ringT * MathF.PI); // brightest along middle of bevel
+                        float shade = Math.Clamp(light * 0.75f + crest * 0.35f, 0f, 1f);
+                        rgb = Vector3.Lerp(rimDark, rimLight, shade);
+                        // Crisp dark outer hairline
+                        if (dist > 0.885f)
+                            rgb *= 0.45f;
+                        alpha = 0.98f;
+                    }
+                    else if (dist > 0.735f)
+                    {
+                        // Recessed dark-bronze inner groove
+                        rgb = rimDark * 0.42f;
+                        alpha = 0.96f;
+                    }
+                    else if (dist > 0.715f)
+                    {
+                        // Thin bright inner bezel highlight
+                        rgb = Vector3.Lerp(rimDark, rimLight, 0.7f * light + 0.25f);
+                        alpha = 0.95f;
+                    }
+                    else
+                    {
+                        // Obsidian-glass inner disc with radial glow + top specular crescent
+                        float coreT = dist / 0.715f;
+                        rgb = Vector3.Lerp(coreCenter, coreEdge, coreT * coreT);
+                        // Top-half curved glass highlight
+                        if (ny < 0.05f)
+                        {
+                            float spec = Math.Clamp((0.05f - ny) * 1.4f, 0f, 1f) * (1f - coreT * 0.65f);
+                            rgb += new Vector3(42f, 44f, 52f) * (spec * spec * 0.55f);
+                        }
+                        alpha = 0.86f;
+                    }
+
+                    // 4 ornate cardinal gem rivets at N/S/E/W along the metallic bezel (r = 0.835)
+                    const float gemR = 0.835f;
+                    const float gemSize = 0.048f;
+                    float dN = MathF.Sqrt(nx * nx + (ny + gemR) * (ny + gemR));
+                    float dS = MathF.Sqrt(nx * nx + (ny - gemR) * (ny - gemR));
+                    float dW = MathF.Sqrt((nx + gemR) * (nx + gemR) + ny * ny);
+                    float dE = MathF.Sqrt((nx - gemR) * (nx - gemR) + ny * ny);
+                    float dGem = MathF.Min(MathF.Min(dN, dS), MathF.Min(dW, dE));
+                    if (dGem < gemSize)
+                    {
+                        float gt = 1f - dGem / gemSize;
+                        rgb = Vector3.Lerp(rimDark * 0.5f, gemColor + new Vector3(60f, 60f, 60f) * gt, Math.Clamp(gt * 1.6f, 0f, 1f));
+                        alpha = 1f;
+                    }
+
+                    // Anti-alias outer rim transition smoothly
+                    if (dist > 0.96f)
+                        alpha *= Math.Clamp((1.0f - dist) / 0.04f, 0f, 1f);
+
+                    byte rByte = (byte)Math.Clamp(rgb.X * alpha, 0f, 255f);
+                    byte gByte = (byte)Math.Clamp(rgb.Y * alpha, 0f, 255f);
+                    byte bByte = (byte)Math.Clamp(rgb.Z * alpha, 0f, 255f);
+                    byte aByte = (byte)Math.Clamp(alpha * 255f, 0f, 255f);
+                    data[y * size + x] = new Color(rByte, gByte, bByte, aByte);
+                }
+            }
+
+            var tex = new Texture2D(gd, size, size);
+            tex.SetData(data);
+            return tex;
+        }
+
+        public override void Dispose()
+        {
+            _medallionGold?.Dispose();
+            _medallionGold = null;
+            _medallionSafe?.Dispose();
+            _medallionSafe = null;
+            _medallionPk?.Dispose();
+            _medallionPk = null;
+            base.Dispose();
+        }
     }
 }
