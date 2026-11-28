@@ -14,7 +14,12 @@ namespace Client.Main.Graphics
     internal sealed class SceneBloom : IDisposable
     {
         internal const int MinimumSceneDimension = 16;
-        internal static bool IsAvailable => GraphicsManager.Instance?.SceneBloomEffect is { IsDisposed: false };
+        // On Android/iOS OpenGL ES, multi-sampler SpriteBatch post-process passes in SceneBloom.fx
+        // rebind slot 0 (SceneSampler) to null, blacking out Login, SelectCharacter, and Gameplay 3D worlds.
+        internal static bool IsAvailable =>
+            !OperatingSystem.IsAndroid() &&
+            !OperatingSystem.IsIOS() &&
+            GraphicsManager.Instance?.SceneBloomEffect is { IsDisposed: false };
 
         private RenderTarget2D _scene;
         private RenderTarget2D _half;
@@ -125,6 +130,7 @@ namespace Client.Main.Graphics
             device.SamplerStates[1] = SamplerState.LinearClamp;
             // EffectPass.Apply rebinds every sampler slot from its effect parameter (null when unset), so the extra
             // inputs must go through the parameters; DX names the textures, OpenGL the samplers.
+            SetTexture(effect, "SceneTexture", "SceneSampler", _scene);
             SetTexture(effect, "BloomTexture", "BloomSampler", _quarterA);
             SetTexture(effect, "AoTexture", "AoSampler", aoTexture);
             device.Textures[1] = _quarterA;
@@ -134,6 +140,7 @@ namespace Client.Main.Graphics
             sprite.End();
             device.Textures[1] = null;
             device.Textures[2] = null;
+            SetTexture(effect, "SceneTexture", "SceneSampler", null);
             SetTexture(effect, "BloomTexture", "BloomSampler", null);
             SetTexture(effect, "AoTexture", "AoSampler", null);
         }
@@ -151,9 +158,11 @@ namespace Client.Main.Graphics
             effect.Parameters["Threshold"]?.SetValue(Threshold);
             effect.Parameters["Knee"]?.SetValue(Knee);
             effect.Parameters["TexelStep"]?.SetValue(texelStep);
+            SetTexture(effect, "SceneTexture", "SceneSampler", source);
             sprite.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone, effect);
             sprite.Draw(source, new Rectangle(0, 0, destination.Width, destination.Height), Color.White);
             sprite.End();
+            SetTexture(effect, "SceneTexture", "SceneSampler", null);
         }
 
         private void EnsureTargets(GraphicsDevice device, int width, int height, int samples)
