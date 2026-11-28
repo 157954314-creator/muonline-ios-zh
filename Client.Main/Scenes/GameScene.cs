@@ -77,6 +77,7 @@ namespace Client.Main.Scenes
         private PartyPanelControl _partyPanel;
         private readonly (string Name, CharacterClassNumber Class, ushort Level, byte[] Appearance) _characterInfo;
         private CharacterInfoWindowControl _characterInfoWindow;
+        public CharacterInfoWindowControl CharacterInfoWindow => _characterInfoWindow;
         private MiniMapControl _miniMap;
         private ILogger _logger = MuGame.AppLoggerFactory?.CreateLogger<GameScene>() ?? NullLogger<GameScene>.Instance;
         private LabelControl _pingLabel; // Displays current ping

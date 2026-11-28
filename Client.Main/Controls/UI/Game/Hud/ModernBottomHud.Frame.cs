@@ -278,14 +278,18 @@ namespace Client.Main.Controls.UI.Game.Hud
 
         private double ExperiencePercent()
         {
-            if (_state.ExperienceForNextLevel == 0)
+            if (_state.ExperienceForNextLevel == 0 && _state.Experience == 0)
                 return 0;
 
-            ushort level = _state.Level;
-            ulong previous = level > 1 ? (ulong)((level - 1 + 9) * (level - 1) * (level - 1) * 10) : 0;
-            ulong inLevel = _state.Experience >= previous ? _state.Experience - previous : 0;
-            ulong needed = _state.ExperienceForNextLevel >= previous ? _state.ExperienceForNextLevel - previous : 1;
-            return needed > 0 ? inLevel / (double)needed * 100.0 : 0.0;
+            ulong level = _state.Level;
+            ulong prevLevel = level > 1 ? level - 1 : 0;
+            ulong previous = prevLevel > 0 ? (prevLevel + 9UL) * prevLevel * prevLevel * 10UL : 0UL;
+            ulong next = _state.ExperienceForNextLevel > previous
+                ? _state.ExperienceForNextLevel
+                : (level + 9UL) * level * level * 10UL;
+            ulong needed = next > previous ? next - previous : 1UL;
+            ulong inLevel = _state.Experience >= previous ? _state.Experience - previous : 0UL;
+            return Math.Clamp(inLevel / (double)needed * 100.0, 0.0, 100.0);
         }
 
         private void DrawExp(SpriteBatch sb, float time, float alpha)

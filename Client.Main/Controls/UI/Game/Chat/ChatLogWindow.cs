@@ -406,6 +406,15 @@ namespace Client.Main.Controls.UI
             if (Status != GameControlStatus.Ready || !Visible || _font == null)
                 return;
 
+            // On mobile, hide the frameless top-left log whenever a left-docked window
+            // (Character Info / Map Warp) is open so floating text never overlaps panel titles.
+            if ((OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) && !_showFrame &&
+                Scene is Scenes.GameScene gs &&
+                (gs.CharacterInfoWindow?.Visible == true || gs.MoveCommandWindow?.Visible == true))
+            {
+                return;
+            }
+
             if (IsSeason6)
             {
                 DrawSeason6(gameTime);

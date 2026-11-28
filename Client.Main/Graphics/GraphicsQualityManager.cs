@@ -188,11 +188,13 @@ namespace Client.Main.Graphics
                 Constants.ENABLE_TERRAIN_GPU_LIGHTING = false;
             }
 
-            // On mobile OpenGL ES, keep native 1.0x resolution + full dynamic lights, item/monster
-            // material shaders, weapon trails, high-quality textures, and grass, while keeping
-            // desktop-heavy offscreen MSAA/SSAO passes off for smooth FPS and GLES stability.
+            // On mobile OpenGL ES, keep crisp high-quality textures, dynamic lights, item/monster
+            // material shaders, weapon trails, and 3D grass, while using 0.85x render scale and
+            // disabling desktop-heavy MSAA/SSAO/per-pixel terrain GPU lighting for smooth FPS in Noria.
             if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
             {
+                Constants.RENDER_SCALE = 0.85f;
+                Constants.ENABLE_TERRAIN_GPU_LIGHTING = false;
                 Constants.MSAA_SAMPLES = 0;
                 Constants.ENABLE_SSAO = false;
                 Constants.ENABLE_WORLD_BLOOM = false;
