@@ -432,14 +432,14 @@ namespace Client.Main.Objects
         // an unreachable target.
         private const int ServerWalkSearchNodes = 2048;
         // Farther than this from the walk's source tile the visual position has lost track of the server: resync.
-        private const int ServerWalkResyncTiles = 3;
+        private const int ServerWalkResyncTiles = 1;
 
         /// <summary>
         /// Walk of another object reported by the server (ObjectWalked). ReceiveMoveCharacter follows the server path
-        /// tile by tile; walking a straight line to the target instead crosses walls whenever the server path bends.
-        /// The path is rebuilt around blocked tiles here, synchronously and with a bounded search.
+        /// tile by tile; when the server includes StepData we follow the exact authoritative tiles, otherwise we
+        /// rebuild the path around blocked tiles synchronously with a bounded search.
         /// </summary>
-        public void MoveFromServerWalk(Vector2 target, Vector2? source = null)
+        public void MoveFromServerWalk(Vector2 target, Vector2? source = null, List<Vector2> serverPath = null)
         {
             if (World == null || !this.IsAlive())
                 return;
@@ -452,7 +452,7 @@ namespace Client.Main.Objects
                     Location = s;
             }
 
-            if (target == Location)
+            if (target == Location && (serverPath == null || serverPath.Count == 0))
                 return;
 
             _movementIntent = true;
@@ -460,10 +460,18 @@ namespace Client.Main.Objects
             uint requestVersion = unchecked(++_moveRequestVersion);
             CancelPendingPathRequest();
 
-            List<Vector2> path = Pathfinding.IsDirectPathWalkable(startPos, target, World)
-                ? Pathfinding.BuildDirectPath(startPos, target)
-                : Pathfinding.FindPath(startPos, target, World, CancellationToken.None, ServerWalkSearchNodes)
-                  ?? Pathfinding.BuildDirectPath(startPos, target);
+            List<Vector2> path;
+            if (serverPath is { Count: > 0 })
+            {
+                path = serverPath;
+            }
+            else
+            {
+                path = Pathfinding.IsDirectPathWalkable(startPos, target, World)
+                    ? Pathfinding.BuildDirectPath(startPos, target)
+                    : Pathfinding.FindPath(startPos, target, World, CancellationToken.None, ServerWalkSearchNodes)
+                      ?? Pathfinding.BuildDirectPath(startPos, target);
+            }
             ApplyPathOnMainThread(path, sendToServer: false, World, startPos, requestVersion);
         }
 

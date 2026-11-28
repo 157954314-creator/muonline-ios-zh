@@ -308,7 +308,7 @@ namespace Client.Main.Controls.UI.Game.Hud
                     if (mainSkill != null)
                         gs.SkillController?.CastSkillFromTouch(mainSkill, gs.JoystickWorldDirection, justPressed);
                     else if (justPressed)
-                        gs.ModernHud?.BeginSkillAssignment(0);
+                        DoAttack(gs);
                 }
                 else if (justPressed)
                 {

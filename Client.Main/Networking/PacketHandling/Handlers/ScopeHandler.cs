@@ -2295,17 +2295,19 @@ namespace Client.Main.Networking.PacketHandling.Handlers
             ushort maskedId;
             byte x, y;
             Vector2? source = null;
+            List<Vector2> serverPath = null;
 
             if (_useExtendedWalkFormat && packet.Length >= ObjectWalkedExtended.GetRequiredSize(0))
             {
                 // Server sends ObjectWalkedExtended for client versions >= 1.06.3 (e.g. 2.04d).
-                // Bytes [5-6] = SourceX/Y, [7-8] = TargetX/Y.
+                // Bytes [5-6] = SourceX/Y, [7-8] = TargetX/Y, [10] = StepCount, [11..] = StepData.
                 var walkExtended = new ObjectWalkedExtended(packet);
                 raw = walkExtended.ObjectId;
                 maskedId = (ushort)(raw & 0x7FFF);
                 x = walkExtended.TargetX;
                 y = walkExtended.TargetY;
                 source = new Vector2(walkExtended.SourceX, walkExtended.SourceY);
+                serverPath = TryDecodeExtendedWalkPath(walkExtended.SourceX, walkExtended.SourceY, x, y, walkExtended.StepCount, walkExtended.StepData);
             }
             else
             {
@@ -2357,7 +2359,7 @@ namespace Client.Main.Networking.PacketHandling.Handlers
                     return;
                 }
 
-                walker.MoveFromServerWalk(new Vector2(x, y), source);
+                walker.MoveFromServerWalk(new Vector2(x, y), source, serverPath);
 
                 // Remote players: UpdateRemotePlayer picks the walk / run / weapon / mount action every frame
                 // (SetPlayerWalk). Forcing the generic walk here restarted that action on every walk packet.
@@ -2377,6 +2379,59 @@ namespace Client.Main.Networking.PacketHandling.Handlers
             });
 
             return Task.CompletedTask;
+        }
+
+        private static List<Vector2> TryDecodeExtendedWalkPath(
+            byte sourceX,
+            byte sourceY,
+            byte targetX,
+            byte targetY,
+            byte stepCount,
+            ReadOnlySpan<byte> stepData)
+        {
+            if (stepCount == 0 || stepCount > 15)
+                return null;
+
+            int requiredBytes = 1 + ((stepCount + 1) / 2);
+            if (stepData.Length < requiredBytes)
+                return null;
+
+            int cx = sourceX;
+            int cy = sourceY;
+            var path = new List<Vector2>(stepCount);
+
+            for (int i = 0; i < stepCount; i++)
+            {
+                byte packed = stepData[1 + (i / 2)];
+                byte dir = (i % 2 == 0) ? (byte)(packed >> 4) : (byte)(packed & 0x0F);
+                switch (dir)
+                {
+                    case 0: cx -= 1; cy -= 1; break; // West
+                    case 1: cy -= 1; break;          // SouthWest
+                    case 2: cx += 1; cy -= 1; break; // South
+                    case 3: cx += 1; break;          // SouthEast
+                    case 4: cx += 1; cy += 1; break; // East
+                    case 5: cy += 1; break;          // NorthEast
+                    case 6: cx -= 1; cy += 1; break; // North
+                    case 7: cx -= 1; break;          // NorthWest
+                    default: return null;
+                }
+
+                if (cx < 0 || cx > 255 || cy < 0 || cy > 255)
+                    return null;
+
+                path.Add(new Vector2(cx, cy));
+            }
+
+            // Validate decoded path lands on the authoritative TargetX/Y (within 1 tile for rounding/last-step rotation).
+            if (Math.Abs(cx - targetX) <= 1 && Math.Abs(cy - targetY) <= 1)
+            {
+                if (cx != targetX || cy != targetY)
+                    path.Add(new Vector2(targetX, targetY));
+                return path;
+            }
+
+            return null;
         }
 
 

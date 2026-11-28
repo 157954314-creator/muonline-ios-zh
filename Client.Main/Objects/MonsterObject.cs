@@ -82,6 +82,8 @@ namespace Client.Main.Objects
         {
             Interactive = true;
             AnimationSpeed = 6f;
+            // Align default monster speed with OpenMU standard 400ms/tile (100 world units / 0.4s = 250f).
+            MoveSpeed = 250f;
             // SourceMain5.2 CreateCharacterPointer: o->Scale = 0.9f default for every
             // character/monster; per-monster cases in CreateMonster override it.
             Scale = 0.9f;
